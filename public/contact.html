@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>The Den — Contact Us</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --bg-dark: #050507;
+      --bg-gradient: radial-gradient(circle at top, #1b1b22 0%, #000 100%);
+      --text-main: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.7);
+      --accent: #ef4444; 
+      --glass: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    html, body { 
+      width: 100%; max-width: 100%; overflow-x: hidden;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      padding-top: 80px;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+    
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--accent); color: white;
+      padding: 12px 24px; border-radius: 99px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      text-decoration: none; font-size: 11px; border: none; cursor: pointer;
+      transition: 0.2s; white-space: nowrap; 
+      width: auto;
+    }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    form .btn { width: 100%; }
+
+    .section-title {
+      font-size: 12px; color: var(--accent); letter-spacing: 0.2em;
+      text-transform: uppercase; font-weight: 800; margin-bottom: 10px; display: block;
+    }
+    h2 { font-size: 32px; font-weight: 800; line-height: 1.1; margin-bottom: 20px; }
+
+    header {
+      position: fixed; top: 0; width: 100%; z-index: 100;
+      background: rgba(0,0,0,0.9); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .nav-wrap { display: flex; justify-content: space-between; align-items: center; height: 70px; }
+    
+    /* Logo Styles */
+    .logo { 
+      font-weight: 900; font-size: 20px; text-transform: uppercase; 
+      letter-spacing: 0.1em; font-style: italic; text-decoration: none; color: white;
+    }
+    .logo span { color: var(--accent); }
+    
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; text-transform: uppercase; }
+    .nav-links a:hover, .nav-links a.active { color: white; }
+    
+    .mobile-toggle { display: none; cursor: pointer; color: white; }
+    
+    @media(max-width: 768px) { 
+      .nav-links { 
+        display: none; 
+        position: absolute; top: 70px; left: 0; width: 100%;
+        background: #000; flex-direction: column; padding: 20px; border-bottom: 1px solid var(--glass-border);
+      }
+      .nav-links.open { display: flex; }
+      .mobile-toggle { display: block; }
+    }
+
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 40px; }
+    @media(max-width: 768px) { .contact-grid { grid-template-columns: 1fr; gap: 40px; } }
+
+    .form-group { margin-bottom: 20px; }
+    .form-input, .form-textarea {
+      width: 100%; background: var(--glass); border: 1px solid var(--glass-border);
+      padding: 16px; border-radius: 8px; color: white; font-family: var(--font-body);
+      font-size: 14px; outline: none; transition: 0.3s;
+    }
+    .form-input:focus, .form-textarea:focus { border-color: var(--accent); background: rgba(255,255,255,0.08); }
+    
+    .contact-item { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+    .contact-icon { color: var(--accent); margin-top: 2px; width: 18px; height: 18px; flex: 0 0 18px; }
+
+    .map-container {
+      width: 100%; height: 400px; border-radius: 12px; overflow: hidden;
+      border: 1px solid var(--glass-border); position: relative;
+      filter: grayscale(100%) invert(88%) brightness(95%) contrast(105%);
+    }
+
+    .hours-card { background: var(--glass); border: 1px solid var(--glass-border); padding: 30px; border-radius: 12px; margin-top: 30px; }
+    .hour-row { display: flex; justify-content: space-between; border-bottom: 1px solid var(--glass-border); padding: 10px 0; font-size: 14px; }
+    .hour-row:last-child { border: none; }
+
+    footer { border-top: 1px solid var(--glass-border); padding: 40px 0; margin-top: 60px; text-align: center; color: var(--text-muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+
+  <div id="nsdBusiness" data-business-id="" style="display:none"></div>
+
+  <header>
+    <div class="container nav-wrap">
+      <a href="index.html#home" class="logo" id="header_logo">THE <span>DEN</span></a>
+      
+      <div class="mobile-toggle" onclick="toggleMenu()">
+        <i data-lucide="menu"></i>
+      </div>
+
+      <nav class="nav-links" id="navLinks">
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="services.html">Services</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="contact.html" class="active">Contact</a>
+      </nav>
+      
+      <a href="javascript:void(0)" class="btn header-btn" onclick="openBooking(); return false;">Book Now</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="contact-grid">
+      <div>
+        <span class="section-title">Get In Touch</span>
+        <h2>Stop By The Shop</h2>
+        <p style="color:var(--text-muted); margin-bottom: 40px;">
+          Got a question about a cut? Looking for a specific barber? Drop us a line or pull up to the shop.
+        </p>
+
+        <div style="margin-bottom: 40px;">
+          <div class="contact-item">
+            <i data-lucide="map-pin" class="contact-icon"></i>
+            <div>
+              <strong style="display:block; margin-bottom:4px;">Location</strong>
+              <span style="color:var(--text-muted); font-size:14px;">3904 Bainbridge Blvd<br>Chesapeake, VA 23324</span>
+            </div>
+          </div>
+          <div class="contact-item">
+            <i data-lucide="phone" class="contact-icon"></i>
+            <div>
+              <strong style="display:block; margin-bottom:4px;">Phone</strong>
+              <a href="tel:7575432966" style="color:var(--text-muted); font-size:14px; text-decoration: none;">(757) 543-2966</a>
+            </div>
+          </div>
+        </div>
+
+        <form onsubmit="event.preventDefault(); showMsg('Message sent (demo).');">
+          <div class="form-group">
+            <input type="text" class="form-input" placeholder="Your Name" required>
+          </div>
+          <div class="form-group">
+            <input type="email" class="form-input" placeholder="Email Address" required>
+          </div>
+          <div class="form-group">
+            <textarea class="form-textarea" rows="4" placeholder="How can we help?" required></textarea>
+          </div>
+          <button type="submit" class="btn">Send Message</button>
+          <div id="formMsg" style="margin-top:10px; font-size:12px; color:var(--text-muted); text-align: center;"></div>
+        </form>
+      </div>
+
+      <div>
+        <div class="map-container">
+          <iframe 
+            title="Google Maps Location for The Den Barbershop"
+            loading="lazy"
+            style="border:0; display:block;" 
+            allowfullscreen="" 
+            width="100%" 
+            height="100%" 
+            src="http://googleusercontent.com/maps.google.com/3">
+          </iframe>
+        </div>
+
+        <div class="hours-card">
+          <h3 style="font-size:16px; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:20px; color:white;">Shop Hours</h3>
+          <div class="hour-row"><span style="color:var(--text-muted)">Monday</span><span>9:00 AM - 7:00 PM</span></div>
+          <div class="hour-row"><span style="color:var(--text-muted)">Tuesday</span><span>9:00 AM - 7:00 PM</span></div>
+          <div class="hour-row"><span style="color:var(--text-muted)">Wednesday</span><span>9:00 AM - 7:00 PM</span></div>
+          <div class="hour-row"><span style="color:var(--text-muted)">Thursday</span><span>9:00 AM - 7:00 PM</span></div>
+          <div class="hour-row"><span style="color:var(--text-muted)">Friday</span><span>9:00 AM - 7:00 PM</span></div>
+          <div class="hour-row"><span style="color:var(--text-muted)">Saturday</span><span>9:00 AM - 7:00 PM</span></div>
+          <div class="hour-row"><span style="color:var(--accent); font-weight:700;">Sunday</span><span style="color:var(--accent); font-weight:700;">Closed</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div style="font-weight:900; font-size:24px; margin-bottom:10px; text-transform:uppercase; font-style:italic;">THE <span style="color:var(--accent)">DEN</span></div>
+      <p>© 2026 The Den Barbershop. Powered by Net Studio.</p>
+    </div>
+  </footer>
+
+  <script>
+    lucide.createIcons();
+    
+    function toggleMenu() {
+      const nav = document.getElementById('navLinks');
+      nav.classList.toggle('open');
+    }
+
+    function showMsg(t){ const el=document.getElementById("formMsg"); if(el) el.textContent=t; }
+
+    // 2) Booking Script Stubs - Initialized globally
+    window.openBooking = window.openBooking || function () { console.warn("Booking script not yet loaded."); };
+    window.closeBooking = window.closeBooking || function () { console.warn("Booking script not yet loaded."); };
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    window.NS = window.NS || {
+      SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
+      BUSINESS_SLUG: "net-studio-barbershop"
+    };
+
+    (async () => {
+      try {
+        const sb = supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
+        const { data, error } = await sb
+          .from("business")
+          .select("id")
+          .eq("slug", window.NS.BUSINESS_SLUG)
+          .maybeSingle();
+
+        if (error || !data?.id) return;
+
+        document.getElementById("nsdBusiness")?.setAttribute("data-business-id", data.id);
+        document.body.dataset.businessId = data.id;
+      } catch (e) {
+        console.error("Supabase Injection Error:", e);
+      }
+    })();
+  </script>
+  <script src="/assets/js/netstudio_booking.js"></script>
+
+</body>
+</html>

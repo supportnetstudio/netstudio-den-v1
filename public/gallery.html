@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>The Den — Gallery</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* --- CORE VARIABLES --- */
+    :root {
+      --bg-dark: #050507;
+      --bg-gradient: radial-gradient(circle at top, #1b1b22 0%, #000 100%);
+      --text-main: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.7);
+      --accent: #ef4444; 
+      --glass: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    /* --- RESET & SCROLL GUARD --- */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    html, body { width:100%; max-width:100%; overflow-x:hidden; }
+    img, iframe { max-width:100%; height:auto; display:block; }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      padding-top: 80px;
+    }
+
+    /* --- UTILITIES --- */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+    
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: white;
+      padding: 10px 20px; border-radius: 99px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      text-decoration: none; font-size: 11px; border: none; cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    
+    .section-title {
+      font-size: 12px; color: var(--accent); letter-spacing: 0.2em;
+      text-transform: uppercase; font-weight: 800; margin-bottom: 10px; display: block;
+      text-align: center;
+    }
+    h2 { font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 40px; }
+
+    /* --- HEADER --- */
+    header {
+      position: fixed; top: 0; width: 100%; z-index: 100;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .nav-wrap {
+      display: flex; justify-content: space-between; align-items: center; height: 70px;
+    }
+    
+    /* Updated Logo Styling */
+    .logo { 
+      font-weight: 900; 
+      font-size: 20px; 
+      text-transform: uppercase; 
+      letter-spacing: 0.1em; 
+      font-style: italic;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+    .logo span { color: var(--accent); }
+    
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; text-transform: uppercase; }
+    .nav-links a:hover, .nav-links a.active { color: white; }
+
+    /* --- GALLERY GRID --- */
+    .den-gallery {
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
+      gap: 20px;
+      padding-bottom: 40px;
+    }
+    .den-photo {
+      height: 350px; 
+      background-size: cover; 
+      background-position: center;
+      border-radius: 4px;
+      filter: grayscale(100%) contrast(1.1);
+      transition: 0.4s ease;
+      position: relative;
+      cursor: pointer;
+      border: 1px solid var(--glass-border);
+      overflow: hidden;
+    }
+    .den-photo:hover {
+      filter: grayscale(0%) contrast(1);
+      transform: scale(1.02);
+      z-index: 2;
+      border-color: var(--accent);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    
+    /* Hover Overlay Tag */
+    .photo-tag {
+      position: absolute; bottom: 10px; left: 10px;
+      background: var(--accent); color: white;
+      font-size: 10px; font-weight: 700; 
+      padding: 6px 12px; text-transform: uppercase;
+      opacity: 0; transform: translateY(10px); transition: 0.3s;
+      border-radius: 4px;
+    }
+    .den-photo:hover .photo-tag { opacity: 1; transform: translateY(0); }
+
+    /* --- FOOTER --- */
+    footer { border-top: 1px solid var(--glass-border); padding: 60px 0; margin-top: 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+    /* --- MOBILE OPTIMIZATION --- */
+    @media (max-width: 768px){
+      .nav-links { display:none; }
+      .photo-tag { opacity:1; transform:none; }
+      .den-photo { filter: grayscale(0%) contrast(1); }
+      .den-photo:hover { 
+        transform: none;
+        border-color: var(--glass-border);
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container nav-wrap">
+      <a href="index.html#home" class="logo" id="header_logo">THE <span>DEN</span></a>
+
+      <nav class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="services.html">Services</a>
+        <a href="gallery.html" class="active">Gallery</a>
+      </nav>
+
+      <a href="#book" class="btn" style="padding: 8px 16px; font-size: 11px;" onclick="openBooking()">Book Now</a>
+    </div>
+  </header>
+
+  <main class="container" style="margin-top: 40px;">
+    
+    <span class="section-title">Our Work</span>
+    <h2>Fresh Cuts & Fades</h2>
+    <p style="text-align:center; color:var(--text-muted); max-width:500px; margin:0 auto 60px;">
+      Real clients. Real results. No filters. Hover over an image to see the detail.
+    </p>
+
+    <div class="den-gallery">
+      <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&q=80&w=800');">
+        <div class="photo-tag">Cut by JerzeeCutz</div>
+      </div>
+      <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&q=80&w=800');">
+        <div class="photo-tag">Cut by K</div>
+      </div>
+      <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1605497788044-5a32c7078486?auto=format&fit=crop&q=80&w=800');">
+        <div class="photo-tag">Cut by Mink</div>
+      </div>
+      <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1503951914875-befbb711ed3e?auto=format&fit=crop&q=80&w=800');">
+        <div class="photo-tag">Cut by JerzeeCutz</div>
+      </div>
+      <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1534304332490-e222d0d4b0ab?auto=format&fit=crop&q=80&w=800');">
+        <div class="photo-tag">Cut by K</div>
+      </div>
+      <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1593431614273-518b76dfb37c?auto=format&fit=crop&q=80&w=800');">
+        <div class="photo-tag">Cut by Mink</div>
+      </div>
+       <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80&w=800');">
+        <div class="photo-tag">Shop Vibe</div>
+      </div>
+       <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&q=80&w=800');">
+        <div class="photo-tag">Line Up</div>
+      </div>
+       <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1517832606299-7ae9b720a186?auto=format&fit=crop&q=80&w=800');">
+        <div class="photo-tag">Texture</div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <div style="font-weight:900; font-size:24px; margin-bottom:20px; text-transform:uppercase; font-style:italic;">THE <span style="color:var(--accent)">DEN</span></div>
+      <p>© 2026 The Den Barbershop. Powered by Net Studio.</p>
+    </div>
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    /* 3) Safe Booking Stubs */
+    window.openBooking = window.openBooking || function () { console.log("Trigger Booking"); };
+    window.closeBooking = window.closeBooking || function () {};
+  </script>
+
+  <script src="/assets/js/netstudio_booking.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>The Den Barbershop — Net Studio Template</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* --- CORE VARIABLES --- */
+    :root {
+      --bg-dark: #050507;
+      --bg-gradient: radial-gradient(circle at top, #1b1b22 0%, #000 100%);
+      --text-main: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.7);
+      --accent: #ef4444; 
+      --glass: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    /* --- RESET --- */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* --- UTILITIES --- */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: white;
+      padding: 12px 24px; border-radius: 99px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      text-decoration: none; font-size: 12px; border: none; cursor: pointer;
+      transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn:hover { opacity: 0.8; transform: translateY(-2px); }
+    .section-title {
+      font-size: 12px; color: var(--accent); letter-spacing: 0.2em;
+      text-transform: uppercase; font-weight: 800; margin-bottom: 10px; display: block;
+    }
+    h2 { font-size: 32px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 16px; }
+
+    /* --- HEADER --- */
+    header {
+      position: fixed; top: 0; width: 100%; z-index: 100;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .nav-wrap {
+      display: flex; justify-content: space-between; align-items: center; height: 70px;
+    }
+    .logo { 
+      font-weight: 900; font-size: 20px; text-transform: uppercase; 
+      letter-spacing: 0.1em; font-style: italic; text-decoration: none; color: inherit; 
+    }
+    .logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 24px; align-items: center; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; text-transform: uppercase; }
+
+    /* --- HERO --- */
+    .hero {
+      height: 85vh; min-height: 600px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.3), #050507),
+                  url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80&w=2000');
+      background-size: cover; background-position: center;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      padding-top: 70px;
+    }
+    .hero-content h1 { font-size: clamp(40px, 8vw, 56px); font-weight: 900; text-transform: uppercase; letter-spacing: -0.03em; line-height: 0.9; margin-bottom: 20px; }
+    .hero-content p { font-size: 18px; color: var(--text-muted); max-width: 500px; margin: 0 auto 30px; }
+
+    /* --- INFO GRID --- */
+    .info-grid {
+      display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px;
+      padding: 80px 0;
+    }
+    @media(max-width: 768px) { .info-grid { grid-template-columns: 1fr; } }
+
+    .glass-card {
+      background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: 20px; padding: 40px;
+    }
+
+    /* --- MAP --- */
+    .map-frame {
+      width: 100%; height: 300px; border-radius: 12px; overflow: hidden;
+      filter: grayscale(100%) invert(90%);
+      margin-bottom: 24px; border: 1px solid var(--glass-border);
+    }
+    .hours-row {
+      display: flex; justify-content: space-between; padding: 8px 0;
+      border-bottom: 1px solid var(--glass-border); font-size: 14px;
+    }
+    .hours-row:last-child { border: none; }
+    .hours-day { color: var(--text-muted); }
+    .hours-time { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    footer { border-top: 1px solid var(--glass-border); padding: 60px 0; margin-top: 60px; text-align: center; color: var(--text-muted); font-size: 13px; }
+  </style>
+
+  <script>
+    // ✅ Safe stubs for booking engine
+    window.openBooking = window.openBooking || function () { console.warn("Booking engine not yet loaded."); };
+    window.closeBooking = window.closeBooking || function () {};
+  </script>
+</head>
+<body id="home">
+
+  <div id="nsdBusiness" data-business-id="" style="display:none"></div>
+
+  <header>
+    <div class="container nav-wrap">
+      <a href="#home" class="logo" id="header_logo">THE <span>DEN</span></a>
+      <nav class="nav-links">
+        <a href="#home">Home</a>
+        <a href="#about">About</a>
+        <a href="#" onclick="openBooking(); return false;" class="btn" style="padding: 8px 16px; font-size: 11px;">Book Now</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-content">
+      <span class="section-title" id="hero_kicker">Established 2025</span>
+      <h1 id="hero_title">Everybody's<br>Barber Shop</h1>
+      <p id="hero_sub">"It feels like back home in here."<br>Traditional cuts, modern vibe.</p>
+      <a id="hero_cta" href="#" onclick="openBooking(); return false;" class="btn">
+        <i data-lucide="calendar"></i> <span id="hero_cta_text">Book Appointment</span>
+      </a>
+    </div>
+  </section>
+
+  <div class="container info-grid" id="about">
+    <div>
+      <span class="section-title">About Us</span>
+      <h2>A Back Home Kinda Thang</h2>
+      <p id="about_text" style="color:var(--text-muted); margin-bottom:20px;">
+        At The Den Barbershop, we're more than just a place to get a haircut. 
+      </p>
+
+      <div class="glass-card" style="margin-top:40px;">
+        <span class="section-title">Join The Team</span>
+        <h3 style="font-size:24px; font-weight:800; margin-bottom:10px;">We Are Hiring Barbers</h3>
+        <p style="font-size:14px; color:var(--text-muted); margin-bottom:20px;">
+          Looking for a chair in a high-traffic shop with a great culture?
+        </p>
+        <button class="btn" style="background:white; color:black;">Apply Here</button>
+      </div>
+    </div>
+
+    <div id="contact">
+      <div class="glass-card">
+        <span class="section-title">Visit Us</span>
+        <div class="map-frame">
+          <iframe 
+            id="visit_map" 
+            width="100%" height="100%" 
+            frameborder="0" style="border:0" 
+            loading="lazy"
+            src="https://www.google.com/maps?q=3904+Bainbridge+Blvd+Chesapeake+VA+23324&output=embed">
+          </iframe>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <div id="visit_name" style="font-weight:700; font-size:16px;">The Den Barbershop</div>
+            <div id="visit_address" style="font-size:14px; color:var(--text-muted);">3904 Bainbridge Blvd<br>Chesapeake, VA 23324</div>
+            <div style="margin-top:10px; display:flex; align-items:center; gap:8px; color:var(--accent); font-weight:700;">
+              <i data-lucide="phone" style="width:14px"></i>
+              <span id="visit_phone">757-543-2966</span>
+            </div>
+        </div>
+
+        <div style="border-top:1px solid var(--glass-border); padding-top:20px;">
+          <span class="section-title">Opening Hours</span>
+          <div class="hours-row"><span class="hours-day">Mon - Fri</span><span class="hours-time">9:00 AM - 7:00 PM</span></div>
+          <div class="hours-row"><span class="hours-day">Saturday</span><span class="hours-time">9:00 AM - 7:00 PM</span></div>
+          <div class="hours-row"><span class="hours-day">Sunday</span><span class="hours-time" style="color:var(--accent)">Closed</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="container">
+      <div id="footer_logo" style="font-weight:900; font-size:24px; margin-bottom:20px; text-transform:uppercase; font-style:italic;">THE <span style="color:var(--accent)">DEN</span></div>
+      <p>© 2026 <span id="copyright_name">The Den Barbershop</span>. Powered by Net Studio.</p>
+    </div>
+  </footer>
+
+  <button type="button" id="homeEditBtn" class="btn" style="position:fixed; right:16px; bottom:16px; z-index:9999; display:none; background: #222; border: 1px solid var(--glass-border);"><i data-lucide="settings"></i> Edit</button>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    window.NS = {
+      SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
+      BUSINESS_SLUG: "net-studio-barbershop",
+      TEMPLATE_KEY: "den_v1"
+    };
+
+    // ✅ FIX 3: Removed redundant early lucide call (one remains in apply() and bottom)
+
+    (() => {
+      const NS = window.NS;
+      const EDIT_MODE = new URLSearchParams(location.search).get("edit") === "1";
+      const sb = supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
+
+      function apply(data) {
+        if (!data) return;
+        
+        if (data.name) {
+          const names = data.name.split(' ');
+          const first = names[0];
+          const rest = names.slice(1).join(' ');
+          const logoHTML = `${first} <span>${rest}</span>`;
+          const logoEl = document.getElementById("header_logo");
+          const footerLogoEl = document.getElementById("footer_logo");
+          if(logoEl) logoEl.innerHTML = logoHTML;
+          if(footerLogoEl) footerLogoEl.innerHTML = logoHTML;
+          document.getElementById("copyright_name").textContent = data.name;
+        }
+
+        const hero = document.querySelector(".hero");
+        if (data.hero_bg && hero) {
+          hero.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${data.hero_bg}')`;
+        }
+
+        document.getElementById("hero_kicker").innerHTML = data.hero_kicker || "Established 2025";
+        document.getElementById("hero_title").innerHTML = data.hero_title || "Everybody's<br>Barber Shop";
+        document.getElementById("hero_sub").innerHTML = data.hero_sub || "";
+        document.getElementById("hero_cta_text").textContent = data.hero_cta_text || "Book Appointment";
+        document.getElementById("visit_name").textContent = data.name || "";
+        document.getElementById("visit_phone").textContent = data.phone || "";
+        document.getElementById("about_text").textContent = data.about || "";
+        
+        // ✅ FIX 1b: Free/Portable map update
+        if (data.map_q) {
+          document.getElementById("visit_map").src = `https://www.google.com/maps?q=${encodeURIComponent(data.map_q)}&output=embed`;
+        }
+        
+        if(window.lucide) lucide.createIcons();
+      }
+
+      async function getBusinessId() {
+        const { data } = await sb.from("business").select("id").eq("slug", NS.BUSINESS_SLUG).maybeSingle();
+        return data?.id;
+      }
+
+      async function load() {
+        try {
+          const bId = await getBusinessId();
+          if (!bId) return null;
+
+          document.getElementById("nsdBusiness")?.setAttribute("data-business-id", bId);
+          document.body.dataset.businessId = bId;
+
+          const { data } = await sb.from("business_sites").select("content_json").eq("business_id", bId).eq("template_key", NS.TEMPLATE_KEY).maybeSingle();
+          return data?.content_json;
+        } catch(e) { return null; }
+      }
+
+      load().then(data => {
+        if(data) apply(data);
+        else if(window.lucide) lucide.createIcons();
+      });
+      
+      if (EDIT_MODE) {
+        document.getElementById("homeEditBtn").style.display = "inline-flex";
+      }
+    })();
+  </script>
+
+  <script src="/assets/js/netstudio_booking.js"></script>
+</body>
+</html>

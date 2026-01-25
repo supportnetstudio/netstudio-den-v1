@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>The Den — Services</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    /* --- CORE VARIABLES --- */
+    :root {
+      --bg-dark: #050507;
+      --bg-gradient: radial-gradient(circle at top, #1b1b22 0%, #000 100%);
+      --text-main: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.7);
+      --accent: #ef4444; 
+      --glass: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    /* --- RESET & MOBILE GUARD (FIX #3) --- */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    html, body { 
+      width: 100%; 
+      max-width: 100%; 
+      overflow-x: hidden; 
+    }
+    
+    img, iframe { 
+      max-width: 100%; 
+      height: auto; 
+      display: block; 
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      padding-top: 80px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* --- UTILITIES --- */
+    .container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+    
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: white;
+      padding: 10px 20px; border-radius: 4px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      text-decoration: none; font-size: 11px; border: none; cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    
+    .section-title {
+      font-size: 11px; color: var(--accent); letter-spacing: 0.25em;
+      text-transform: uppercase; font-weight: 800; margin-bottom: 10px; display: block;
+      text-align: center;
+    }
+    h2 { font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 40px; }
+
+    /* --- HEADER (FIX #2) --- */
+    header {
+      position: fixed; top: 0; width: 100%; z-index: 100;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .nav-wrap {
+      display: flex; justify-content: space-between; align-items: center; height: 70px;
+    }
+    .logo { font-weight: 900; font-size: 20px; text-transform: uppercase; letter-spacing: 0.1em; font-style: italic; }
+    .logo span { color: var(--accent); }
+    
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    .nav-links a:hover, .nav-links a.active { color: white; }
+
+    /* --- SERVICE LIST STYLES --- */
+    main { flex: 1; }
+    
+    .service-category { margin-bottom: 40px; }
+    .cat-title { 
+      font-size: 13px; color: var(--text-muted); text-transform: uppercase; 
+      letter-spacing: 0.1em; border-bottom: 1px solid var(--glass-border); 
+      padding-bottom: 10px; margin-bottom: 20px; font-weight: 700;
+    }
+
+    .service-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px; background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: 8px; margin-bottom: 12px; transition: 0.2s;
+    }
+    
+    @media (min-width: 769px) {
+      .service-item:hover { border-color: var(--accent); transform: translateX(5px); }
+    }
+    
+    .svc-name { font-weight: 700; font-size: 16px; color: white; }
+    .svc-desc { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .svc-price { font-size: 18px; font-weight: 700; color: var(--accent); }
+    .svc-right { display: flex; align-items: center; gap: 20px; }
+
+    /* --- FOOTER --- */
+    footer { 
+      border-top: 1px solid var(--glass-border); 
+      padding: 60px 0; 
+      margin-top: 60px; 
+      text-align: center; 
+      color: var(--text-muted); 
+      font-size: 13px; 
+      background: #000;
+    }
+
+    /* --- RESPONSIVE FIXES --- */
+    @media (max-width: 768px) {
+      .nav-links { display: none; } /* Hide only secondary links */
+      .service-item { flex-direction: column; align-items: flex-start; gap: 15px; }
+      .svc-right { width: 100%; justify-content: space-between; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container nav-wrap" style="max-width: 1100px;">
+      <div class="logo">THE <span>DEN</span></div>
+      
+      <nav class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="services.html" class="active">Services</a>
+      </nav>
+
+      <a href="#" onclick="openBooking(); return false;" class="btn">Book Now</a>
+    </div>
+  </header>
+
+  <main class="container" style="margin-top: 40px;">
+    
+    <span class="section-title">The Menu</span>
+    <h2>Service Price List</h2>
+
+    <div class="service-category">
+      <div class="cat-title">Adults</div>
+      
+      <div class="service-item">
+        <div>
+          <div class="svc-name">Regular Cut</div>
+          <div class="svc-desc">Standard scissor or clipper cut.</div>
+        </div>
+        <div class="svc-right">
+          <div class="svc-price">$20.00</div>
+          <button class="btn" onclick="openBooking(); return false;">Book</button>
+        </div>
+      </div>
+
+      <div class="service-item">
+        <div>
+          <div class="svc-name">Fade Cut</div>
+          <div class="svc-desc">Skin fade, taper fade, or bald fade.</div>
+        </div>
+        <div class="svc-right">
+          <div class="svc-price">$25.00</div>
+          <button class="btn" onclick="openBooking(); return false;">Book</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="service-category">
+      <div class="cat-title">Grooming</div>
+      
+      <div class="service-item">
+        <div>
+          <div class="svc-name">Beard Trim</div>
+          <div class="svc-desc">Shape, trim, and hydrate.</div>
+        </div>
+        <div class="svc-right">
+          <div class="svc-price">$15.00</div>
+          <button class="btn" onclick="openBooking(); return false;">Book</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="background: rgba(239, 68, 68, 0.05); border: 1px dashed var(--accent); border-radius: 12px; padding: 30px; text-align: center; margin-top: 60px;">
+      <h3 style="color: var(--accent); font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.1em;">Walk-Ins Welcome</h3>
+      <p style="font-size: 13px; color: var(--text-muted); max-width: 600px; margin: 0 auto;">
+        Appointments are prioritized. Walk-ins will be served based on availability.
+        <br><strong>Open Mon-Sat. Closed Sunday.</strong>
+      </p>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="container" style="max-width: 1100px;">
+      <div class="logo" style="font-size: 24px; margin-bottom: 20px;">THE <span>DEN</span></div>
+      <p style="margin-bottom: 10px;">© 2026 The Den Barbershop.</p>
+      
+      <div style="display: flex; justify-content: center; gap: 20px;">
+        <a href="#" style="color: var(--text-muted); text-decoration: none;">Instagram</a>
+        <a href="#" style="color: var(--text-muted); text-decoration: none;">Facebook</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+
+    // Safe stub logic: Never hard-override the engine
+    window.openBooking = window.openBooking || function() {
+      console.warn("Net Studio booking engine not yet loaded.");
+      // Fallback if the script fails to load
+      // window.location.href = "https://booksy.com/en-us/";
+    };
+    
+    window.closeBooking = window.closeBooking || function() {};
+  </script>
+
+  <script src="/assets/js/netstudio_booking.js"></script>
+
+</body>
+</html>
