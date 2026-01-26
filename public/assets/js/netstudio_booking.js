@@ -443,7 +443,7 @@
 
     btn.disabled = true;
     btn.textContent = "Processing...";
-    const { error } = await supabase.from("appointments").insert([payload]);
+    const { error } = await supabase.from("bookings").insert([payload]);
 
     if (error) {
       alert("Error: " + error.message);
