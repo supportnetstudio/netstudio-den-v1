@@ -1,7 +1,6 @@
 /**
- * NetStudio Booking Engine v2.4 - Universal & Airtight + Sticky Identity + Async Wait
- * Integrated fixes: State reset, config validation, deterministic sorting, URI safety.
- * sticky Identity: Layered Business ID Resolution (DOM > Cache > URL) + Async Wait Guard
+ * NetStudio Booking Engine v2.6 - Universal + Staff Merge + Deterministic Services
+ * Features: Sticky Identity, Async Wait, Staff-Specific Overrides, Service Fallback, SMS Opt-in
  */
 (async function () {
   if (window.__NSD_BOOKING_INIT__) return;
@@ -13,7 +12,6 @@
 
   // 2. Resolve Business ID (DOM > Cache > URL) with Async Wait ✅
   const getBusinessIdNow = () => {
-    // A) DOM (Preferred - allows per-page overrides)
     const el =
       document.querySelector("#nsdBusiness[data-business-id]") ||
       (document.body?.dataset?.businessId ? document.body : null) ||
@@ -25,23 +23,19 @@
       return domId;
     }
 
-    // B) localStorage fallback (Cross-page memory)
     try {
       const cached = (localStorage.getItem("ns_business_id") || "").trim();
       if (cached) return cached;
     } catch (e) {}
 
-    // C) URL fallback (Manual linking: ?business_id=...)
     const urlId = (new URLSearchParams(location.search).get("business_id") || "").trim();
     if (urlId) {
       try { localStorage.setItem("ns_business_id", urlId); } catch (e) {}
       return urlId;
     }
-
     return "";
   };
 
-  // ✅ WAIT GUARD: give the page time to set data-business-id
   const waitForBusinessId = (timeoutMs = 6000) => {
     const started = Date.now();
     return new Promise(resolve => {
@@ -57,31 +51,29 @@
 
   const BUSINESS_ID = await waitForBusinessId();
   if (!BUSINESS_ID) {
-    console.error("NSD Engine: Critical Error - No business ID found in DOM, Cache, or URL.");
-    // Revert openBooking to show error since initialization failed
-    window.openBooking = () => alert("Booking System Error: Business ID missing.");
+    console.error("NSD: Critical - No ID found.");
+    window.openBooking = () => alert("System Error: Business ID missing.");
     return;
   }
 
-  // 3. Config & Validation
+  // 3. Config
   const CFG = window.NetStudioConfig || {
     supabaseUrl: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
     supabaseAnonKey:
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
   };
 
-  if (!CFG.supabaseUrl || !CFG.supabaseAnonKey) {
-    console.error("NSD Engine: Missing Supabase credentials.");
-    return;
-  }
-
   // 4. State Management
   let selectedDate = null;
   let viewDate = new Date(); viewDate.setDate(1);
   const DAY_KEYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
-  let bizHours = {};
+  
+  // Base business hours
+  let globalBizHours = {}; 
+  // Currently active hours (Shop Default + Staff Overrides)
+  let activeHours = {}; 
 
-  // 5. UI Injection (Including CSS & Layout Fixes)
+  // 5. UI Injection
   const injectUI = () => {
     const styles = `<style>
       #nsdModalContainer { display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); overflow-y:auto; padding:20px; align-items:center; justify-content:center; }
@@ -111,6 +103,11 @@
       .nsd-time-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; max-height:280px; overflow-y:auto; padding:4px; }
       .nsd-time-slot { border-radius:12px; padding:12px 5px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); color:#fff; cursor:pointer; font-size:11px; text-align:center; }
       .nsd-time-slot.selected { background:#fff!important; color:#000!important; }
+      
+      /* SMS Checkbox */
+      .nsd-checkbox { display:flex; align-items:center; font-size:12px; margin-bottom:12px; cursor:pointer; opacity:0.8; }
+      .nsd-checkbox input { margin-right:8px; accent-color: var(--nsd-gold); width:16px; height:16px; }
+      .nsd-checkbox:hover { opacity:1; }
     </style>`;
 
     const html = `
@@ -137,7 +134,10 @@
 
           <div class="nsd-step" data-step="1" style="display:none;">
             <label style="font-size:10px; text-transform:uppercase; opacity:0.5; margin-bottom:4px; display:block;">Select Professional</label>
-            <select id="nsdBarber" class="nsd-input"><option value="">Any Available</option></select>
+            <select id="nsdBarber" class="nsd-input">
+              <option value="">Any Available</option>
+            </select>
+            
             <div class="nsd-cal-header">
               <button id="nsdPrevMonth" class="nsd-nav-btn">‹</button>
               <div id="nsdCalMonth"></div>
@@ -156,9 +156,15 @@
           </div>
 
           <div class="nsd-step" data-step="3" style="display:none;">
-            <select id="nsdService" class="nsd-input"><option value="">Select Service</option></select>
+            <select id="nsdService" class="nsd-input"><option value="">Loading Services...</option></select>
             <input type="text" id="nsdClientName" placeholder="Full Name" class="nsd-input">
             <input type="tel" id="nsdClientPhone" placeholder="Phone Number" class="nsd-input">
+            
+            <label class="nsd-checkbox">
+              <input type="checkbox" id="nsdSmsConsent" checked>
+              <span>Receive confirmation & reminders via SMS</span>
+            </label>
+
             <button class="btn-main" id="nsdSubmitBtn">Confirm Booking</button>
             <button class="btn-ghost" id="nsdBackToTime">Back</button>
           </div>
@@ -183,7 +189,7 @@
   const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
   const supabase = createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
 
-  // 7. Logic Helpers
+  // 7. Logic Helpers & Rendering
   const setStep = (n) => {
     document.querySelectorAll(".nsd-step").forEach((s) => {
       s.style.display = parseInt(s.dataset.step) === n ? "block" : "none";
@@ -197,14 +203,11 @@
 
   const resetFlow = () => {
     selectedDate = null;
-    const calBtn = document.getElementById("nsdCalContinue");
-    const timeBtn = document.getElementById("nsdTimeContinue");
-    const timeVal = document.getElementById("nsdTimeValue");
-    const success = document.getElementById("nsdSuccessInline");
-    if (calBtn) calBtn.disabled = true;
-    if (timeBtn) timeBtn.disabled = true;
-    if (timeVal) timeVal.value = "";
-    if (success) success.style.display = "none";
+    activeHours = { ...globalBizHours }; // Reset to shop hours
+    document.getElementById("nsdBarber").value = "";
+    document.getElementById("nsdCalContinue").disabled = true;
+    document.getElementById("nsdTimeContinue").disabled = true;
+    document.getElementById("nsdSuccessInline").style.display = "none";
     document.querySelectorAll(".nsd-cal-day").forEach((el) => el.classList.remove("selected"));
     setStep(0);
   };
@@ -215,6 +218,7 @@
     resetFlow();
     m.classList.add("active");
     document.body.style.overflow = "hidden";
+    renderCalendar();
   };
 
   window.closeBooking = () => {
@@ -225,11 +229,44 @@
     }
   };
 
+  // 8. Staff Specific Logic (Merge Strategy) ✅
+  const handleBarberChange = async () => {
+    const barberId = document.getElementById("nsdBarber").value;
+
+    // A) Always start with Shop Hours (The "Merge Base")
+    activeHours = { ...globalBizHours };
+
+    if (!barberId) {
+      renderCalendar();
+      return;
+    }
+
+    // B) Fetch Staff Overrides
+    const { data: staffHours, error } = await supabase
+      .from("team_member_hours")
+      .select("day_of_week, open_time, close_time, is_closed")
+      .eq("team_member_id", barberId);
+
+    if (error) {
+      console.warn("NSD: Error fetching staff hours", error.message);
+      renderCalendar(); // Fail safe: show shop hours
+      return;
+    }
+
+    // C) Merge Logic: Only override days the staff explicitly defined
+    (staffHours || []).forEach((r) => {
+      activeHours[String(r.day_of_week).toLowerCase()] = r;
+    });
+
+    renderCalendar();
+  };
+
+  document.getElementById("nsdBarber").addEventListener("change", handleBarberChange);
+
+  // 9. Calendar & Time
   const renderCalendar = () => {
     const grid = document.getElementById("nsdCalGrid");
     const monthLbl = document.getElementById("nsdCalMonth");
-    if (!grid || !monthLbl) return;
-
     grid.innerHTML = "";
     monthLbl.textContent = viewDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
@@ -238,9 +275,7 @@
     const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
 
     for (let i = 0; i < startDow; i++) {
-      const spacer = document.createElement("div");
-      spacer.className = "nsd-cal-spacer";
-      grid.appendChild(spacer);
+      grid.appendChild(Object.assign(document.createElement("div"), { className: "nsd-cal-spacer" }));
     }
 
     for (let d = 1; d <= daysInMonth; d++) {
@@ -250,7 +285,8 @@
       btn.textContent = d;
 
       const dayKey = DAY_KEYS[date.getDay()];
-      const isClosed = !bizHours[dayKey] || bizHours[dayKey].is_closed;
+      const hours = activeHours[dayKey];
+      const isClosed = !hours || hours.is_closed;
 
       if (isClosed || date < today) {
         btn.classList.add("disabled");
@@ -266,15 +302,16 @@
     }
   };
 
-  // 8. Step-Specific Renderers
   const renderTimeSlots = async () => {
     const grid = document.getElementById("nsdTimeGrid");
-    grid.innerHTML =
-      "<div style='grid-column:1/-1; text-align:center; opacity:0.5; font-size:12px;'>Loading slots...</div>";
+    grid.innerHTML = "<div style='grid-column:1/-1; text-align:center; opacity:0.5; font-size:12px;'>Loading slots...</div>";
 
     const dayKey = DAY_KEYS[selectedDate.getDay()];
-    const hours = bizHours[dayKey];
-    if (!hours) return;
+    const hours = activeHours[dayKey];
+    if (!hours) {
+        grid.innerHTML = "<div style='grid-column:1/-1; text-align:center;'>No slots available.</div>";
+        return;
+    }
 
     let current = new Date(selectedDate);
     const [hStart, mStart] = hours.open_time.split(":");
@@ -284,7 +321,10 @@
     end.setHours(parseInt(hEnd), parseInt(mEnd), 0, 0);
 
     grid.innerHTML = "";
+    let hasSlots = false;
+    
     while (current < end) {
+      hasSlots = true;
       const slotStr = current.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
       const btn = document.createElement("button");
       btn.className = "nsd-time-slot";
@@ -298,21 +338,63 @@
       grid.appendChild(btn);
       current.setMinutes(current.getMinutes() + 30);
     }
+    
+    if(!hasSlots) grid.innerHTML = "<div style='grid-column:1/-1; text-align:center;'>Fully Booked</div>";
   };
 
-  const loadServices = async () => {
-    const svcDropdown = document.getElementById("nsdService");
-    if (svcDropdown.options.length > 1) return;
-    const { data: services } = await supabase
+  // 10. Service Logic (Deterministic Fallback) ✅
+  const loadAllServices = async () => {
+    const { data } = await supabase
       .from("services")
       .select("id, name, price")
       .eq("business_id", BUSINESS_ID)
       .eq("is_active", true)
       .order("name");
-    services?.forEach((s) => svcDropdown.appendChild(new Option(`${s.name} ($${s.price})`, s.id)));
+    return data || [];
   };
 
-  // 9. Wiring Listeners
+  const loadServices = async () => {
+    const svcDropdown = document.getElementById("nsdService");
+    svcDropdown.innerHTML = "<option value=''>Loading...</option>";
+
+    const barberId = document.getElementById("nsdBarber").value;
+    let services = [];
+
+    if (barberId) {
+      // 1. Try to get linked services
+      const { data: links } = await supabase
+        .from("team_member_services")
+        .select("service_id")
+        .eq("team_member_id", barberId);
+
+      const ids = (links || []).map(x => x.service_id).filter(Boolean);
+
+      if (ids.length > 0) {
+        // 2a. Found links -> Filter services
+        const { data: filtered } = await supabase
+          .from("services")
+          .select("id, name, price")
+          .eq("business_id", BUSINESS_ID)
+          .in("id", ids)
+          .eq("is_active", true)
+          .order("name");
+        services = filtered || [];
+      } else {
+        // 2b. No links -> Fallback to ALL services
+        services = await loadAllServices();
+      }
+    } else {
+      // 3. No barber selected -> All services
+      services = await loadAllServices();
+    }
+
+    svcDropdown.innerHTML = "<option value=''>Select Service</option>";
+    services.forEach((s) =>
+      svcDropdown.appendChild(new Option(`${s.name} ($${s.price})`, s.id))
+    );
+  };
+
+  // 11. Wiring
   document.getElementById("nsdCloseBtn").addEventListener("click", window.closeBooking);
   document.getElementById("nsdGateGuest").onclick = () => setStep(1);
   document.getElementById("nsdGatePortal").onclick = () => {
@@ -344,6 +426,7 @@
       service_id: document.getElementById("nsdService").value,
       client_name: document.getElementById("nsdClientName").value.trim(),
       client_phone: document.getElementById("nsdClientPhone").value.trim(),
+      sms_opt_in: document.getElementById("nsdSmsConsent").checked, // ✅ Captured
       appointment_date: selectedDate.toISOString().split("T")[0],
       appointment_time: document.getElementById("nsdTimeValue").value,
     };
@@ -369,21 +452,24 @@
     }
   };
 
-  // 10. Initial Data Hydration
+  // 12. Initialization Data
   const { data: biz } = await supabase.from("business").select("name,bio,shop_bio").eq("id", BUSINESS_ID).single();
   if (biz) {
     document.getElementById("nsdShopName").textContent = biz.name || "Booking";
     document.getElementById("nsdShopTagline").textContent = biz.shop_bio || biz.bio || "";
   }
 
+  // Load Base Hours
   const { data: hrs } = await supabase.from("business_hours").select("*").eq("business_id", BUSINESS_ID);
-  hrs?.forEach((r) => (bizHours[r.day_of_week.toLowerCase()] = r));
+  hrs?.forEach((r) => (globalBizHours[r.day_of_week.toLowerCase()] = r));
+  activeHours = { ...globalBizHours }; // Default to global
 
+  // Load Active Team Only ✅
   const { data: team } = await supabase
     .from("team_members")
     .select("id,name")
     .eq("business_id", BUSINESS_ID)
-    .eq("is_active", true)
+    .eq("is_active", true) // Active Only
     .eq("accepts_bookings", true)
     .order("name");
   team?.forEach((b) => document.getElementById("nsdBarber").appendChild(new Option(b.name, b.id)));
