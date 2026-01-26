@@ -1,6 +1,6 @@
 /**
- * NetStudio Booking Engine v2.7
- * Fixes: Uses team_member_menu_items, enforces linked staff (auth_user_id), adds client_email
+ * NetStudio Booking Engine v2.8
+ * Fixes: Schema Patch (bookings table), Payload Mapping (start_at, menu_item_id), Email Opt-in
  */
 (async function () {
   if (window.__NSD_BOOKING_INIT__) return;
@@ -73,7 +73,7 @@
   // Currently active hours (Shop Default + Staff Overrides)
   let activeHours = {}; 
 
-  // 5. UI Injection (Updated with Email Field)
+  // 5. UI Injection
   const injectUI = () => {
     const styles = `<style>
       #nsdModalContainer { display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); overflow-y:auto; padding:20px; align-items:center; justify-content:center; }
@@ -228,10 +228,10 @@
     }
   };
 
-  // 8. Staff Specific Logic (Merge Strategy)
+  // 8. Staff Specific Logic
   const handleBarberChange = async () => {
     const barberId = document.getElementById("nsdBarber").value;
-    activeHours = { ...globalBizHours }; // Always reset base first
+    activeHours = { ...globalBizHours }; 
 
     if (!barberId) {
       renderCalendar();
@@ -337,7 +337,7 @@
     if(!hasSlots) grid.innerHTML = "<div style='grid-column:1/-1; text-align:center;'>Fully Booked</div>";
   };
 
-  // 10. Service Logic (Fixed: Uses team_member_menu_items) ✅
+  // 10. Service Logic (Deterministic: Team Items > All)
   const money = (cents) => {
     const n = Number(cents || 0);
     return (n / 100).toFixed(2);
@@ -363,7 +363,7 @@
       if (!error && (data || []).length) items = data || [];
     }
 
-    // B) Fallback: No barber OR barber has no items -> fallback to 'services'
+    // B) Fallback
     if (!items.length) {
       const { data, error } = await supabase
         .from("services")
@@ -373,7 +373,6 @@
         .order("name");
 
       if (!error && (data || []).length) {
-        // Normalize 'services' data to match 'menu_items' shape
         items = (data || []).map(s => ({
           id: s.id,
           name: s.name,
@@ -420,29 +419,55 @@
   document.getElementById("nsdTimeContinue").onclick = () => { setStep(3); loadServices(); };
   document.getElementById("nsdBackToTime").onclick = () => setStep(2);
 
+  // 12. Submit Logic (Schema V2 Patch applied) ✅
   document.getElementById("nsdSubmitBtn").onclick = async () => {
     const btn = document.getElementById("nsdSubmitBtn");
     
-    // Updated Payload to include Email
+    // Data Gathering
+    const selectedTimeLabel = document.getElementById("nsdTimeValue").value; // e.g., "10:30 AM"
+    const dateOnly = selectedDate.toISOString().split("T")[0]; // "2023-10-27"
+
+    // Construct Robust ISO Timestamp (start_at)
+    const combinedDate = new Date(selectedDate);
+    const [time, modifier] = selectedTimeLabel.split(" ");
+    let [hours, minutes] = time.split(":");
+    if (hours === "12") hours = "00";
+    if (modifier === "PM") hours = parseInt(hours, 10) + 12;
+    combinedDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    const startAt = combinedDate.toISOString();
+
     const payload = {
       business_id: BUSINESS_ID,
       team_member_id: document.getElementById("nsdBarber").value || null,
-      service_id: document.getElementById("nsdService").value,
+
+      // ID Mapping (Using direct value for now)
+      menu_item_id: document.getElementById("nsdService").value,
+      team_member_menu_item_id: document.getElementById("nsdService").value,
+
+      start_at: startAt,
+      date_only: dateOnly,
+      time_label: selectedTimeLabel,
+
       client_name: document.getElementById("nsdClientName").value.trim(),
       client_phone: document.getElementById("nsdClientPhone").value.trim(),
       client_email: (document.getElementById("nsdClientEmail")?.value || "").trim() || null,
+
       sms_opt_in: document.getElementById("nsdSmsConsent").checked,
-      appointment_date: selectedDate.toISOString().split("T")[0],
-      appointment_time: document.getElementById("nsdTimeValue").value,
+      email_opt_in: !!(document.getElementById("nsdClientEmail")?.value || "").trim(),
+
+      status: "booked",
+      source: "public_booking",
     };
 
-    if (!payload.service_id || !payload.client_name || !payload.client_phone) {
+    if (!payload.menu_item_id || !payload.client_name || !payload.client_phone) {
       alert("Please fill in Name, Phone, and Service.");
       return;
     }
 
     btn.disabled = true;
     btn.textContent = "Processing...";
+    
+    // Write to 'bookings' table
     const { error } = await supabase.from("bookings").insert([payload]);
 
     if (error) {
@@ -453,11 +478,11 @@
       document.querySelectorAll(".nsd-step").forEach((s) => (s.style.display = "none"));
       document.getElementById("nsdStepLabel").style.display = "none";
       document.getElementById("nsdSuccessInline").style.display = "block";
-      document.getElementById("nsdSuccessDetails").textContent = `${payload.appointment_date} @ ${payload.appointment_time}`;
+      document.getElementById("nsdSuccessDetails").textContent = `${payload.date_only} @ ${payload.time_label}`;
     }
   };
 
-  // 12. Initialization Data
+  // 13. Initialization Data
   const { data: biz } = await supabase.from("business").select("name,bio,shop_bio").eq("id", BUSINESS_ID).single();
   if (biz) {
     document.getElementById("nsdShopName").textContent = biz.name || "Booking";
@@ -467,16 +492,16 @@
   // Load Base Hours
   const { data: hrs } = await supabase.from("business_hours").select("*").eq("business_id", BUSINESS_ID);
   hrs?.forEach((r) => (globalBizHours[r.day_of_week.toLowerCase()] = r));
-  activeHours = { ...globalBizHours }; // Default to global
+  activeHours = { ...globalBizHours }; 
 
-  // Load Active Team Only (Linked Staff + Accepts Bookings) ✅
+  // Load Active Team (Linked Only)
   const { data: team } = await supabase
     .from("team_members")
     .select("id,name")
     .eq("business_id", BUSINESS_ID)
     .eq("is_active", true)
     .eq("accepts_bookings", true)
-    .not("auth_user_id", "is", null) // ✅ Linked login only
+    .not("auth_user_id", "is", null)
     .order("name");
 
   team?.forEach((b) => document.getElementById("nsdBarber").appendChild(new Option(b.name, b.id)));
