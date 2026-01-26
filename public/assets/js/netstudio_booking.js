@@ -1,8 +1,8 @@
 /**
- * NetStudio Booking Engine v3.2
+ * NetStudio Booking Engine v3.3
  * Fixes: 
- * 1. Self-Healing Service Logic (Forces 30m default if DB duration is missing/null)
- * 2. Dual ID Resolution (Satisfies "Booking requires duration" trigger)
+ * 1. Dual-Path Lookup (Handles both legacy menu_item_id and new team_item_id)
+ * 2. Self-Healing Service Logic (Forces 30m default if DB duration is missing/null)
  * 3. Customer Upsert (Prevents Unique Key Violation)
  */
 (async function () {
@@ -393,7 +393,7 @@
   document.getElementById("nsdTimeContinue").onclick = () => { setStep(3); loadServices(); };
   document.getElementById("nsdBackToTime").onclick = () => setStep(2);
 
-  // 12. Submit Logic - V3.2 (Customer Upsert + Self-Healing Service Logic) ✅
+  // 12. Submit Logic - V3.3 (Dual-Path Lookup + Self-Healing) ✅
   document.getElementById("nsdSubmitBtn").onclick = async () => {
     const btn = document.getElementById("nsdSubmitBtn");
     
@@ -413,15 +413,42 @@
     btn.disabled = true;
     btn.textContent = "Verifying...";
 
-    // --- STEP 0: SELF-HEALING SERVICE LOOKUP ---
+    // --- STEP 0: DUAL-PATH SERVICE LOOKUP + SELF-HEALING ---
     let svcRow = null;
-    const { data: svcData, error: svcErr } = await supabase
-      .from("team_member_menu_items")
-      .select("id, duration_min, menu_item_id") 
-      .eq("id", selectedServiceId)
-      .single();
+    let svcData = null;
+    let svcErr = null;
 
-    // If fetch failed or row missing, force a synthetic service row
+    // Try 1: Lookup as team_member_menu_items.id (New standard)
+    {
+      const r1 = await supabase
+        .from("team_member_menu_items")
+        .select("id, duration_min, menu_item_id") 
+        .eq("id", selectedServiceId)
+        .single();
+      
+      if (!r1.error && r1.data) {
+        svcData = r1.data;
+      } else {
+        svcErr = r1.error;
+      }
+    }
+
+    // Try 2: Lookup as menu_item_id (Legacy / Fallback)
+    if (!svcData) {
+      const r2 = await supabase
+        .from("team_member_menu_items")
+        .select("id, duration_min, menu_item_id") 
+        .eq("menu_item_id", selectedServiceId)
+        .eq("business_id", BUSINESS_ID)
+        .single(); // Might need limit(1) if duplicates exist
+
+      if (!r2.error && r2.data) {
+        svcData = r2.data;
+        svcErr = null; // Clear error if fallback succeeded
+      }
+    }
+
+    // Self-Healing Block (Same as v3.2)
     if (svcErr || !svcData) {
       console.warn("NSD: Service lookup failed, forcing fallback duration", svcErr?.message);
       svcRow = {
@@ -505,7 +532,7 @@
       business_id: BUSINESS_ID,
       team_member_id: document.getElementById("nsdBarber").value || null,
 
-      // DUAL ID: Uses real data if good, fallbacks if bad
+      // Dual ID Resolution
       menu_item_id: svcRow.menu_item_id,        
       team_member_menu_item_id: svcRow.id,      
 
