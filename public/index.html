@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <script src="https://unpkg.com/lucide@latest"></script>
+  
   <style>
     /* --- CORE VARIABLES --- */
     :root {
@@ -103,6 +104,9 @@
     .hours-time { font-weight: 600; font-variant-numeric: tabular-nums; }
 
     footer { border-top: 1px solid var(--glass-border); padding: 60px 0; margin-top: 60px; text-align: center; color: var(--text-muted); font-size: 13px; }
+    
+    /* Error state */
+    #site-error { display: none; text-align: center; padding: 100px 20px; color: #666; font-size: 14px; }
   </style>
 
   <script>
@@ -115,106 +119,130 @@
 
   <div id="nsdBusiness" data-business-id="" style="display:none"></div>
 
-  <header>
-    <div class="container nav-wrap">
-      <a href="#home" class="logo" id="header_logo">THE <span>DEN</span></a>
-      <nav class="nav-links">
-        <a href="#home">Home</a>
-        <a href="#about">About</a>
-        <a href="#" onclick="openBooking(); return false;" class="btn" style="padding: 8px 16px; font-size: 11px;">Book Now</a>
-      </nav>
-    </div>
-  </header>
-
-  <section class="hero">
-    <div class="hero-content">
-      <span class="section-title" id="hero_kicker">Established 2025</span>
-      <h1 id="hero_title">Everybody's<br>Barber Shop</h1>
-      <p id="hero_sub">"It feels like back home in here."<br>Traditional cuts, modern vibe.</p>
-      <a id="hero_cta" href="#" onclick="openBooking(); return false;" class="btn">
-        <i data-lucide="calendar"></i> <span id="hero_cta_text">Book Appointment</span>
-      </a>
-    </div>
-  </section>
-
-  <div class="container info-grid" id="about">
-    <div>
-      <span class="section-title">About Us</span>
-      <h2>A Back Home Kinda Thang</h2>
-      <p id="about_text" style="color:var(--text-muted); margin-bottom:20px;">
-        At The Den Barbershop, we're more than just a place to get a haircut. 
-      </p>
-
-      <div class="glass-card" style="margin-top:40px;">
-        <span class="section-title">Join The Team</span>
-        <h3 style="font-size:24px; font-weight:800; margin-bottom:10px;">We Are Hiring Barbers</h3>
-        <p style="font-size:14px; color:var(--text-muted); margin-bottom:20px;">
-          Looking for a chair in a high-traffic shop with a great culture?
-        </p>
-        <button class="btn" style="background:white; color:black;">Apply Here</button>
-      </div>
-    </div>
-
-    <div id="contact">
-      <div class="glass-card">
-        <span class="section-title">Visit Us</span>
-        <div class="map-frame">
-          <iframe 
-            id="visit_map" 
-            width="100%" height="100%" 
-            frameborder="0" style="border:0" 
-            loading="lazy"
-            src="https://www.google.com/maps?q=3904+Bainbridge+Blvd+Chesapeake+VA+23324&output=embed">
-          </iframe>
-        </div>
-
-        <div style="margin-bottom: 20px;">
-            <div id="visit_name" style="font-weight:700; font-size:16px;">The Den Barbershop</div>
-            <div id="visit_address" style="font-size:14px; color:var(--text-muted);">3904 Bainbridge Blvd<br>Chesapeake, VA 23324</div>
-            <div style="margin-top:10px; display:flex; align-items:center; gap:8px; color:var(--accent); font-weight:700;">
-              <i data-lucide="phone" style="width:14px"></i>
-              <span id="visit_phone">757-543-2966</span>
-            </div>
-        </div>
-
-        <div style="border-top:1px solid var(--glass-border); padding-top:20px;">
-          <span class="section-title">Opening Hours</span>
-          <div class="hours-row"><span class="hours-day">Mon - Fri</span><span class="hours-time">9:00 AM - 7:00 PM</span></div>
-          <div class="hours-row"><span class="hours-day">Saturday</span><span class="hours-time">9:00 AM - 7:00 PM</span></div>
-          <div class="hours-row"><span class="hours-day">Sunday</span><span class="hours-time" style="color:var(--accent)">Closed</span></div>
-        </div>
-      </div>
-    </div>
+  <div id="site-error">
+    <h2>404</h2>
+    <p>We couldn't find a barbershop at this address.</p>
   </div>
 
-  <footer>
-    <div class="container">
-      <div id="footer_logo" style="font-weight:900; font-size:24px; margin-bottom:20px; text-transform:uppercase; font-style:italic;">THE <span style="color:var(--accent)">DEN</span></div>
-      <p>© 2026 <span id="copyright_name">The Den Barbershop</span>. Powered by Net Studio.</p>
-    </div>
-  </footer>
+  <div id="main-content" style="opacity: 0; transition: opacity 0.5s ease;">
+      <header>
+        <div class="container nav-wrap">
+          <a href="#home" class="logo" id="header_logo">THE <span>DEN</span></a>
+          <nav class="nav-links">
+            <a href="#home">Home</a>
+            <a href="#about">About</a>
+            <a href="#" onclick="openBooking(); return false;" class="btn" style="padding: 8px 16px; font-size: 11px;">Book Now</a>
+          </nav>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="hero-content">
+          <span class="section-title" id="hero_kicker">Established 2025</span>
+          <h1 id="hero_title">Everybody's<br>Barber Shop</h1>
+          <p id="hero_sub">"It feels like back home in here."<br>Traditional cuts, modern vibe.</p>
+          <a id="hero_cta" href="#" onclick="openBooking(); return false;" class="btn">
+            <i data-lucide="calendar"></i> <span id="hero_cta_text">Book Appointment</span>
+          </a>
+        </div>
+      </section>
+
+      <div class="container info-grid" id="about">
+        <div>
+          <span class="section-title">About Us</span>
+          <h2>A Back Home Kinda Thang</h2>
+          <p id="about_text" style="color:var(--text-muted); margin-bottom:20px;">
+            At The Den Barbershop, we're more than just a place to get a haircut. 
+          </p>
+
+          <div class="glass-card" style="margin-top:40px;">
+            <span class="section-title">Join The Team</span>
+            <h3 style="font-size:24px; font-weight:800; margin-bottom:10px;">We Are Hiring Barbers</h3>
+            <p style="font-size:14px; color:var(--text-muted); margin-bottom:20px;">
+              Looking for a chair in a high-traffic shop with a great culture?
+            </p>
+            <button class="btn" style="background:white; color:black;">Apply Here</button>
+          </div>
+        </div>
+
+        <div id="contact">
+          <div class="glass-card">
+            <span class="section-title">Visit Us</span>
+            <div class="map-frame">
+              <iframe 
+                id="visit_map" 
+                width="100%" height="100%" 
+                frameborder="0" style="border:0" 
+                loading="lazy"
+                src="">
+              </iframe>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <div id="visit_name" style="font-weight:700; font-size:16px;">The Den Barbershop</div>
+                <div id="visit_address" style="font-size:14px; color:var(--text-muted);">3904 Bainbridge Blvd<br>Chesapeake, VA 23324</div>
+                <div style="margin-top:10px; display:flex; align-items:center; gap:8px; color:var(--accent); font-weight:700;">
+                  <i data-lucide="phone" style="width:14px"></i>
+                  <span id="visit_phone">757-543-2966</span>
+                </div>
+            </div>
+
+            <div style="border-top:1px solid var(--glass-border); padding-top:20px;">
+              <span class="section-title">Opening Hours</span>
+              <div class="hours-row"><span class="hours-day">Mon - Fri</span><span class="hours-time">9:00 AM - 7:00 PM</span></div>
+              <div class="hours-row"><span class="hours-day">Saturday</span><span class="hours-time">9:00 AM - 7:00 PM</span></div>
+              <div class="hours-row"><span class="hours-day">Sunday</span><span class="hours-time" style="color:var(--accent)">Closed</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="container">
+          <div id="footer_logo" style="font-weight:900; font-size:24px; margin-bottom:20px; text-transform:uppercase; font-style:italic;">THE <span style="color:var(--accent)">DEN</span></div>
+          <p>© 2026 <span id="copyright_name">The Den Barbershop</span>. Powered by Net Studio.</p>
+        </div>
+      </footer>
+  </div>
 
   <button type="button" id="homeEditBtn" class="btn" style="position:fixed; right:16px; bottom:16px; z-index:9999; display:none; background: #222; border: 1px solid var(--glass-border);"><i data-lucide="settings"></i> Edit</button>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    // --- ROUTE A1: Auto-Detect Slug ---
+    function nsGetSlugFromHost() {
+      const host = location.hostname.toLowerCase();
+
+      // 1. Production: {slug}.netstudio.app
+      if (host.endsWith(".netstudio.app")) {
+        return host.split(".")[0]; 
+      }
+
+      // 2. Dev/Preview: allow ?b=the-den
+      const qp = new URLSearchParams(location.search).get("b");
+      if (qp) return qp.toLowerCase();
+
+      // 3. Fallback for Localhost
+      return "the-den"; 
+    }
+
     window.NS = {
       SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-      BUSINESS_SLUG: "net-studio-barbershop",
+      BUSINESS_SLUG: nsGetSlugFromHost(),
       TEMPLATE_KEY: "den_v1"
     };
-
-    // ✅ FIX 3: Removed redundant early lucide call (one remains in apply() and bottom)
 
     (() => {
       const NS = window.NS;
       const EDIT_MODE = new URLSearchParams(location.search).get("edit") === "1";
       const sb = supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
 
+      // --- 1. Apply content to DOM ---
       function apply(data) {
         if (!data) return;
         
+        // Brand Identity
         if (data.name) {
           const names = data.name.split(' ');
           const first = names[0];
@@ -227,11 +255,13 @@
           document.getElementById("copyright_name").textContent = data.name;
         }
 
+        // Hero Images
         const hero = document.querySelector(".hero");
         if (data.hero_bg && hero) {
           hero.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${data.hero_bg}')`;
         }
 
+        // Text Content
         document.getElementById("hero_kicker").innerHTML = data.hero_kicker || "Established 2025";
         document.getElementById("hero_title").innerHTML = data.hero_title || "Everybody's<br>Barber Shop";
         document.getElementById("hero_sub").innerHTML = data.hero_sub || "";
@@ -240,32 +270,66 @@
         document.getElementById("visit_phone").textContent = data.phone || "";
         document.getElementById("about_text").textContent = data.about || "";
         
-        // ✅ FIX 1b: Free/Portable map update
+        // ✅ Map Fix: Use HTTPS and correct standard embed query
         if (data.map_q) {
-          document.getElementById("visit_map").src = `https://www.google.com/maps?q=${encodeURIComponent(data.map_q)}&output=embed`;
+          const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(data.map_q)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
+          document.getElementById("visit_map").src = mapUrl;
         }
         
+        // Render Icons
         if(window.lucide) lucide.createIcons();
+
+        // Reveal Site
+        document.getElementById("main-content").style.opacity = "1";
       }
 
+      // --- 2. Resolve Slug to Business ID ---
       async function getBusinessId() {
-        const { data } = await sb.from("business").select("id").eq("slug", NS.BUSINESS_SLUG).maybeSingle();
-        return data?.id;
+        console.log("Loading business for slug:", NS.BUSINESS_SLUG);
+        const { data, error } = await sb
+          .from("business")
+          .select("id")
+          .eq("slug", NS.BUSINESS_SLUG)
+          .maybeSingle(); // Returns null if not found, doesn't throw
+
+        if (error || !data) {
+          console.warn("Business not found for slug:", NS.BUSINESS_SLUG);
+          return null;
+        }
+        return data.id;
       }
 
+      // --- 3. Load Content ---
       async function load() {
         try {
           const bId = await getBusinessId();
-          if (!bId) return null;
+          
+          if (!bId) {
+            document.getElementById("site-error").style.display = "block";
+            return null;
+          }
 
+          // Tag Body for Booking Engine
           document.getElementById("nsdBusiness")?.setAttribute("data-business-id", bId);
           document.body.dataset.businessId = bId;
 
-          const { data } = await sb.from("business_sites").select("content_json").eq("business_id", bId).eq("template_key", NS.TEMPLATE_KEY).maybeSingle();
+          // Fetch JSON content
+          const { data } = await sb
+            .from("business_sites")
+            .select("content_json")
+            .eq("business_id", bId)
+            .eq("template_key", NS.TEMPLATE_KEY)
+            .maybeSingle();
+
           return data?.content_json;
-        } catch(e) { return null; }
+
+        } catch(e) { 
+          console.error("Load error:", e);
+          return null; 
+        }
       }
 
+      // --- 4. Init ---
       load().then(data => {
         if(data) apply(data);
         else if(window.lucide) lucide.createIcons();
