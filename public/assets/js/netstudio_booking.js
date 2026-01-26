@@ -1,6 +1,6 @@
 /**
- * NetStudio Booking Engine v2.8
- * Fixes: Schema Patch (bookings table), Payload Mapping (start_at, menu_item_id), Email Opt-in
+ * NetStudio Booking Engine v2.9
+ * Fixes: Customer Upsert (Prevents Unique Key Violation), Schema Patch (bookings table), Payload Mapping
  */
 (async function () {
   if (window.__NSD_BOOKING_INIT__) return;
@@ -10,7 +10,7 @@
   window.openBooking = () => console.warn("NSD Engine: Initializing...");
   window.closeBooking = () => {};
 
-  // 2. Resolve Business ID (DOM > Cache > URL) with Async Wait ✅
+  // 2. Resolve Business ID (DOM > Cache > URL)
   const getBusinessIdNow = () => {
     const el =
       document.querySelector("#nsdBusiness[data-business-id]") ||
@@ -68,9 +68,7 @@
   let viewDate = new Date(); viewDate.setDate(1);
   const DAY_KEYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
   
-  // Base business hours
   let globalBizHours = {}; 
-  // Currently active hours (Shop Default + Staff Overrides)
   let activeHours = {}; 
 
   // 5. UI Injection
@@ -188,7 +186,7 @@
   const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
   const supabase = createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
 
-  // 7. Logic Helpers & Rendering
+  // 7. Logic Helpers
   const setStep = (n) => {
     document.querySelectorAll(".nsd-step").forEach((s) => {
       s.style.display = parseInt(s.dataset.step) === n ? "block" : "none";
@@ -228,7 +226,7 @@
     }
   };
 
-  // 8. Staff Specific Logic
+  // 8. Staff Logic
   const handleBarberChange = async () => {
     const barberId = document.getElementById("nsdBarber").value;
     activeHours = { ...globalBizHours }; 
@@ -337,11 +335,8 @@
     if(!hasSlots) grid.innerHTML = "<div style='grid-column:1/-1; text-align:center;'>Fully Booked</div>";
   };
 
-  // 10. Service Logic (Deterministic: Team Items > All)
-  const money = (cents) => {
-    const n = Number(cents || 0);
-    return (n / 100).toFixed(2);
-  };
+  // 10. Service Logic
+  const money = (cents) => (Number(cents || 0) / 100).toFixed(2);
 
   const loadServices = async () => {
     const svcDropdown = document.getElementById("nsdService");
@@ -350,20 +345,18 @@
     const barberId = document.getElementById("nsdBarber").value;
     let items = [];
 
-    // A) If barber selected -> try team_member_menu_items
     if (barberId) {
       const { data, error } = await supabase
         .from("team_member_menu_items")
-        .select("id, name, price_cents, duration_min")
+        .select("id, name, price_cents")
         .eq("business_id", BUSINESS_ID)
         .eq("team_member_id", barberId)
         .eq("is_active", true)
         .order("name");
 
-      if (!error && (data || []).length) items = data || [];
+      if (!error && data) items = data;
     }
 
-    // B) Fallback
     if (!items.length) {
       const { data, error } = await supabase
         .from("services")
@@ -372,12 +365,11 @@
         .eq("is_active", true)
         .order("name");
 
-      if (!error && (data || []).length) {
-        items = (data || []).map(s => ({
+      if (!error && data) {
+        items = data.map(s => ({
           id: s.id,
           name: s.name,
           price_cents: Math.round(Number(s.price || 0) * 100),
-          duration_min: null,
         }));
       }
     }
@@ -395,39 +387,43 @@
     });
   };
 
-  // 11. Wiring
+  // 11. Event Wiring
   document.getElementById("nsdCloseBtn").addEventListener("click", window.closeBooking);
   document.getElementById("nsdGateGuest").onclick = () => setStep(1);
   document.getElementById("nsdGatePortal").onclick = () => {
     window.location.href = `/customer-portal?business_id=${encodeURIComponent(BUSINESS_ID)}`;
   };
-
   document.getElementById("nsdPrevMonth").onclick = () => { viewDate.setMonth(viewDate.getMonth() - 1); renderCalendar(); };
   document.getElementById("nsdNextMonth").onclick = () => { viewDate.setMonth(viewDate.getMonth() + 1); renderCalendar(); };
-
   document.getElementById("nsdCalContinue").onclick = () => {
     document.getElementById("nsdStep2DateLabel").textContent = selectedDate.toLocaleDateString(undefined, {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
+      weekday: "long", month: "short", day: "numeric"
     });
     setStep(2);
     renderTimeSlots();
   };
-
   document.getElementById("nsdBackToDate").onclick = () => setStep(1);
   document.getElementById("nsdTimeContinue").onclick = () => { setStep(3); loadServices(); };
   document.getElementById("nsdBackToTime").onclick = () => setStep(2);
 
-  // 12. Submit Logic (Schema V2 Patch applied) ✅
+  // 12. Submit Logic - PATCHED V2.9 (Customer Upsert + Schema Fix) ✅
   document.getElementById("nsdSubmitBtn").onclick = async () => {
     const btn = document.getElementById("nsdSubmitBtn");
     
-    // Data Gathering
-    const selectedTimeLabel = document.getElementById("nsdTimeValue").value; // e.g., "10:30 AM"
-    const dateOnly = selectedDate.toISOString().split("T")[0]; // "2023-10-27"
+    // Inputs
+    const selectedTimeLabel = document.getElementById("nsdTimeValue").value;
+    const dateOnly = selectedDate.toISOString().split("T")[0];
+    const clientName = document.getElementById("nsdClientName").value.trim();
+    const clientPhone = document.getElementById("nsdClientPhone").value.trim();
+    const clientEmail = (document.getElementById("nsdClientEmail")?.value || "").trim();
+    const serviceId = document.getElementById("nsdService").value;
 
-    // Construct Robust ISO Timestamp (start_at)
+    if (!serviceId || !clientName || !clientPhone) {
+      alert("Please fill in Name, Phone, and Service.");
+      return;
+    }
+
+    // Timestamptz Construction
     const combinedDate = new Date(selectedDate);
     const [time, modifier] = selectedTimeLabel.split(" ");
     let [hours, minutes] = time.split(":");
@@ -436,42 +432,93 @@
     combinedDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     const startAt = combinedDate.toISOString();
 
+    btn.disabled = true;
+    btn.textContent = "Processing...";
+
+    // --- STEP 1: UPSERT CUSTOMER ---
+    const customerPayload = {
+      business_id: BUSINESS_ID,
+      email: clientEmail || null,
+      name: clientName,
+      phone: clientPhone,
+      sms_opt_in: document.getElementById("nsdSmsConsent").checked,
+      email_opt_in: !!clientEmail,
+    };
+
+    let customerId = null;
+
+    // Only lookup if email exists (Unique Key Constraint Prevention)
+    if (clientEmail) {
+      const { data: existingCustomer, error: findErr } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("business_id", BUSINESS_ID)
+        .eq("email", clientEmail)
+        .single();
+
+      if (findErr && findErr.code !== "PGRST116") { // PGRST116 = No Rows Found
+        alert("System Error (Customer Lookup): " + findErr.message);
+        btn.disabled = false;
+        btn.textContent = "Confirm Booking";
+        return;
+      }
+
+      if (existingCustomer?.id) {
+        // Update existing
+        customerId = existingCustomer.id;
+        await supabase.from("customers").update(customerPayload).eq("id", customerId);
+      } else {
+        // Insert new
+        const { data: newCustomer, error: createErr } = await supabase
+          .from("customers")
+          .insert([customerPayload])
+          .select("id")
+          .single();
+
+        if (createErr) {
+          alert("Error creating customer record: " + createErr.message);
+          btn.disabled = false;
+          btn.textContent = "Confirm Booking";
+          return;
+        }
+        customerId = newCustomer.id;
+      }
+    } else {
+      // Logic for Phone-only users (Optional: Create customer without email if schema allows)
+      // For now, we leave customerId null if no email, unless your DB requires it.
+      // If DB requires customer_id, you must enable phone-based upsert here too.
+    }
+
+    // --- STEP 2: CREATE BOOKING ---
     const payload = {
       business_id: BUSINESS_ID,
       team_member_id: document.getElementById("nsdBarber").value || null,
 
-      // ID Mapping (Using direct value for now)
-      menu_item_id: document.getElementById("nsdService").value,
-      team_member_menu_item_id: document.getElementById("nsdService").value,
+      // Dual-mapped IDs (as per schema patch request)
+      menu_item_id: serviceId,
+      team_member_menu_item_id: serviceId,
 
       start_at: startAt,
       date_only: dateOnly,
       time_label: selectedTimeLabel,
 
-      client_name: document.getElementById("nsdClientName").value.trim(),
-      client_phone: document.getElementById("nsdClientPhone").value.trim(),
-      client_email: (document.getElementById("nsdClientEmail")?.value || "").trim() || null,
-
-      sms_opt_in: document.getElementById("nsdSmsConsent").checked,
-      email_opt_in: !!(document.getElementById("nsdClientEmail")?.value || "").trim(),
+      client_name: clientName,
+      client_phone: clientPhone,
+      client_email: clientEmail || null,
+      
+      sms_opt_in: customerPayload.sms_opt_in,
+      email_opt_in: customerPayload.email_opt_in,
 
       status: "booked",
       source: "public_booking",
+
+      customer_id: customerId, // ✅ LINKED: Prevents duplicates
     };
 
-    if (!payload.menu_item_id || !payload.client_name || !payload.client_phone) {
-      alert("Please fill in Name, Phone, and Service.");
-      return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = "Processing...";
-    
-    // Write to 'bookings' table
     const { error } = await supabase.from("bookings").insert([payload]);
 
     if (error) {
-      alert("Error: " + error.message);
+      alert("Booking Error: " + error.message);
       btn.disabled = false;
       btn.textContent = "Confirm Booking";
     } else {
@@ -482,19 +529,17 @@
     }
   };
 
-  // 13. Initialization Data
+  // 13. Initialization
   const { data: biz } = await supabase.from("business").select("name,bio,shop_bio").eq("id", BUSINESS_ID).single();
   if (biz) {
     document.getElementById("nsdShopName").textContent = biz.name || "Booking";
     document.getElementById("nsdShopTagline").textContent = biz.shop_bio || biz.bio || "";
   }
 
-  // Load Base Hours
   const { data: hrs } = await supabase.from("business_hours").select("*").eq("business_id", BUSINESS_ID);
   hrs?.forEach((r) => (globalBizHours[r.day_of_week.toLowerCase()] = r));
   activeHours = { ...globalBizHours }; 
 
-  // Load Active Team (Linked Only)
   const { data: team } = await supabase
     .from("team_members")
     .select("id,name")
