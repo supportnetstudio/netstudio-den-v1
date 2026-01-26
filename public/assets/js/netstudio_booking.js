@@ -1,6 +1,6 @@
 /**
- * NetStudio Booking Engine v2.6 - Universal + Staff Merge + Deterministic Services
- * Features: Sticky Identity, Async Wait, Staff-Specific Overrides, Service Fallback, SMS Opt-in
+ * NetStudio Booking Engine v2.7
+ * Fixes: Uses team_member_menu_items, enforces linked staff (auth_user_id), adds client_email
  */
 (async function () {
   if (window.__NSD_BOOKING_INIT__) return;
@@ -73,7 +73,7 @@
   // Currently active hours (Shop Default + Staff Overrides)
   let activeHours = {}; 
 
-  // 5. UI Injection
+  // 5. UI Injection (Updated with Email Field)
   const injectUI = () => {
     const styles = `<style>
       #nsdModalContainer { display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); overflow-y:auto; padding:20px; align-items:center; justify-content:center; }
@@ -103,8 +103,6 @@
       .nsd-time-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; max-height:280px; overflow-y:auto; padding:4px; }
       .nsd-time-slot { border-radius:12px; padding:12px 5px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); color:#fff; cursor:pointer; font-size:11px; text-align:center; }
       .nsd-time-slot.selected { background:#fff!important; color:#000!important; }
-      
-      /* SMS Checkbox */
       .nsd-checkbox { display:flex; align-items:center; font-size:12px; margin-bottom:12px; cursor:pointer; opacity:0.8; }
       .nsd-checkbox input { margin-right:8px; accent-color: var(--nsd-gold); width:16px; height:16px; }
       .nsd-checkbox:hover { opacity:1; }
@@ -159,10 +157,11 @@
             <select id="nsdService" class="nsd-input"><option value="">Loading Services...</option></select>
             <input type="text" id="nsdClientName" placeholder="Full Name" class="nsd-input">
             <input type="tel" id="nsdClientPhone" placeholder="Phone Number" class="nsd-input">
+            <input type="email" id="nsdClientEmail" placeholder="Email (optional)" class="nsd-input">
             
             <label class="nsd-checkbox">
               <input type="checkbox" id="nsdSmsConsent" checked>
-              <span>Receive confirmation & reminders via SMS</span>
+              <span>Receive confirmation & reminders</span>
             </label>
 
             <button class="btn-main" id="nsdSubmitBtn">Confirm Booking</button>
@@ -203,7 +202,7 @@
 
   const resetFlow = () => {
     selectedDate = null;
-    activeHours = { ...globalBizHours }; // Reset to shop hours
+    activeHours = { ...globalBizHours };
     document.getElementById("nsdBarber").value = "";
     document.getElementById("nsdCalContinue").disabled = true;
     document.getElementById("nsdTimeContinue").disabled = true;
@@ -229,19 +228,16 @@
     }
   };
 
-  // 8. Staff Specific Logic (Merge Strategy) ✅
+  // 8. Staff Specific Logic (Merge Strategy)
   const handleBarberChange = async () => {
     const barberId = document.getElementById("nsdBarber").value;
-
-    // A) Always start with Shop Hours (The "Merge Base")
-    activeHours = { ...globalBizHours };
+    activeHours = { ...globalBizHours }; // Always reset base first
 
     if (!barberId) {
       renderCalendar();
       return;
     }
 
-    // B) Fetch Staff Overrides
     const { data: staffHours, error } = await supabase
       .from("team_member_hours")
       .select("day_of_week, open_time, close_time, is_closed")
@@ -249,11 +245,10 @@
 
     if (error) {
       console.warn("NSD: Error fetching staff hours", error.message);
-      renderCalendar(); // Fail safe: show shop hours
+      renderCalendar();
       return;
     }
 
-    // C) Merge Logic: Only override days the staff explicitly defined
     (staffHours || []).forEach((r) => {
       activeHours[String(r.day_of_week).toLowerCase()] = r;
     });
@@ -342,15 +337,10 @@
     if(!hasSlots) grid.innerHTML = "<div style='grid-column:1/-1; text-align:center;'>Fully Booked</div>";
   };
 
-  // 10. Service Logic (Deterministic Fallback) ✅
-  const loadAllServices = async () => {
-    const { data } = await supabase
-      .from("services")
-      .select("id, name, price")
-      .eq("business_id", BUSINESS_ID)
-      .eq("is_active", true)
-      .order("name");
-    return data || [];
+  // 10. Service Logic (Fixed: Uses team_member_menu_items) ✅
+  const money = (cents) => {
+    const n = Number(cents || 0);
+    return (n / 100).toFixed(2);
   };
 
   const loadServices = async () => {
@@ -358,40 +348,52 @@
     svcDropdown.innerHTML = "<option value=''>Loading...</option>";
 
     const barberId = document.getElementById("nsdBarber").value;
-    let services = [];
+    let items = [];
 
+    // A) If barber selected -> try team_member_menu_items
     if (barberId) {
-      // 1. Try to get linked services
-      const { data: links } = await supabase
-        .from("team_member_services")
-        .select("service_id")
-        .eq("team_member_id", barberId);
+      const { data, error } = await supabase
+        .from("team_member_menu_items")
+        .select("id, name, price_cents, duration_min")
+        .eq("business_id", BUSINESS_ID)
+        .eq("team_member_id", barberId)
+        .eq("is_active", true)
+        .order("name");
 
-      const ids = (links || []).map(x => x.service_id).filter(Boolean);
+      if (!error && (data || []).length) items = data || [];
+    }
 
-      if (ids.length > 0) {
-        // 2a. Found links -> Filter services
-        const { data: filtered } = await supabase
-          .from("services")
-          .select("id, name, price")
-          .eq("business_id", BUSINESS_ID)
-          .in("id", ids)
-          .eq("is_active", true)
-          .order("name");
-        services = filtered || [];
-      } else {
-        // 2b. No links -> Fallback to ALL services
-        services = await loadAllServices();
+    // B) Fallback: No barber OR barber has no items -> fallback to 'services'
+    if (!items.length) {
+      const { data, error } = await supabase
+        .from("services")
+        .select("id, name, price")
+        .eq("business_id", BUSINESS_ID)
+        .eq("is_active", true)
+        .order("name");
+
+      if (!error && (data || []).length) {
+        // Normalize 'services' data to match 'menu_items' shape
+        items = (data || []).map(s => ({
+          id: s.id,
+          name: s.name,
+          price_cents: Math.round(Number(s.price || 0) * 100),
+          duration_min: null,
+        }));
       }
-    } else {
-      // 3. No barber selected -> All services
-      services = await loadAllServices();
     }
 
     svcDropdown.innerHTML = "<option value=''>Select Service</option>";
-    services.forEach((s) =>
-      svcDropdown.appendChild(new Option(`${s.name} ($${s.price})`, s.id))
-    );
+
+    if (!items.length) {
+      svcDropdown.innerHTML = "<option value=''>No services available</option>";
+      return;
+    }
+
+    items.forEach((s) => {
+      const label = `${s.name} ($${money(s.price_cents)})`;
+      svcDropdown.appendChild(new Option(label, s.id));
+    });
   };
 
   // 11. Wiring
@@ -420,19 +422,22 @@
 
   document.getElementById("nsdSubmitBtn").onclick = async () => {
     const btn = document.getElementById("nsdSubmitBtn");
+    
+    // Updated Payload to include Email
     const payload = {
       business_id: BUSINESS_ID,
       team_member_id: document.getElementById("nsdBarber").value || null,
       service_id: document.getElementById("nsdService").value,
       client_name: document.getElementById("nsdClientName").value.trim(),
       client_phone: document.getElementById("nsdClientPhone").value.trim(),
-      sms_opt_in: document.getElementById("nsdSmsConsent").checked, // ✅ Captured
+      client_email: (document.getElementById("nsdClientEmail")?.value || "").trim() || null,
+      sms_opt_in: document.getElementById("nsdSmsConsent").checked,
       appointment_date: selectedDate.toISOString().split("T")[0],
       appointment_time: document.getElementById("nsdTimeValue").value,
     };
 
     if (!payload.service_id || !payload.client_name || !payload.client_phone) {
-      alert("Please fill in all details.");
+      alert("Please fill in Name, Phone, and Service.");
       return;
     }
 
@@ -464,14 +469,16 @@
   hrs?.forEach((r) => (globalBizHours[r.day_of_week.toLowerCase()] = r));
   activeHours = { ...globalBizHours }; // Default to global
 
-  // Load Active Team Only ✅
+  // Load Active Team Only (Linked Staff + Accepts Bookings) ✅
   const { data: team } = await supabase
     .from("team_members")
     .select("id,name")
     .eq("business_id", BUSINESS_ID)
-    .eq("is_active", true) // Active Only
+    .eq("is_active", true)
     .eq("accepts_bookings", true)
+    .not("auth_user_id", "is", null) // ✅ Linked login only
     .order("name");
+
   team?.forEach((b) => document.getElementById("nsdBarber").appendChild(new Option(b.name, b.id)));
 
   renderCalendar();
