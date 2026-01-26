@@ -1,18 +1,18 @@
 /**
- * NetStudio Booking Engine v2.3 - Universal & Airtight + Sticky Identity
+ * NetStudio Booking Engine v2.4 - Universal & Airtight + Sticky Identity + Async Wait
  * Integrated fixes: State reset, config validation, deterministic sorting, URI safety.
- * Sticky Identity: Layered Business ID Resolution (DOM > Cache > URL) + write-through cache
+ * sticky Identity: Layered Business ID Resolution (DOM > Cache > URL) + Async Wait Guard
  */
 (async function () {
   if (window.__NSD_BOOKING_INIT__) return;
   window.__NSD_BOOKING_INIT__ = true;
 
   // 1. Safe Stubs
-  window.openBooking = () => console.warn("NSD Engine: Not initialized.");
+  window.openBooking = () => console.warn("NSD Engine: Initializing...");
   window.closeBooking = () => {};
 
-  // 2. Resolve Business ID (DOM > Cache > URL) ✅
-  const getBusinessId = () => {
+  // 2. Resolve Business ID (DOM > Cache > URL) with Async Wait ✅
+  const getBusinessIdNow = () => {
     // A) DOM (Preferred - allows per-page overrides)
     const el =
       document.querySelector("#nsdBusiness[data-business-id]") ||
@@ -41,9 +41,25 @@
     return "";
   };
 
-  const BUSINESS_ID = getBusinessId();
+  // ✅ WAIT GUARD: give the page time to set data-business-id
+  const waitForBusinessId = (timeoutMs = 6000) => {
+    const started = Date.now();
+    return new Promise(resolve => {
+      const tick = () => {
+        const id = getBusinessIdNow();
+        if (id) return resolve(id);
+        if (Date.now() - started >= timeoutMs) return resolve("");
+        setTimeout(tick, 50);
+      };
+      tick();
+    });
+  };
+
+  const BUSINESS_ID = await waitForBusinessId();
   if (!BUSINESS_ID) {
     console.error("NSD Engine: Critical Error - No business ID found in DOM, Cache, or URL.");
+    // Revert openBooking to show error since initialization failed
+    window.openBooking = () => alert("Booking System Error: Business ID missing.");
     return;
   }
 
