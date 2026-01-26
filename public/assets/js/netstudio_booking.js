@@ -1,6 +1,9 @@
 /**
- * NetStudio Booking Engine v2.9
- * Fixes: Customer Upsert (Prevents Unique Key Violation), Schema Patch (bookings table), Payload Mapping
+ * NetStudio Booking Engine v3.0
+ * Changes: 
+ * 1. Customer Upsert (Prevents Unique Key Violation)
+ * 2. Strict Service Logic (Only team_member_menu_items allowed)
+ * 3. Pre-flight Validation (Ensures duration exists before insert)
  */
 (async function () {
   if (window.__NSD_BOOKING_INIT__) return;
@@ -335,7 +338,7 @@
     if(!hasSlots) grid.innerHTML = "<div style='grid-column:1/-1; text-align:center;'>Fully Booked</div>";
   };
 
-  // 10. Service Logic
+  // 10. Service Logic (Strict Mode: team_member_menu_items ONLY)
   const money = (cents) => (Number(cents || 0) / 100).toFixed(2);
 
   const loadServices = async () => {
@@ -343,46 +346,30 @@
     svcDropdown.innerHTML = "<option value=''>Loading...</option>";
 
     const barberId = document.getElementById("nsdBarber").value;
-    let items = [];
+    let query = supabase
+      .from("team_member_menu_items")
+      .select("id, name, price_cents, duration_min")
+      .eq("business_id", BUSINESS_ID)
+      .eq("is_active", true)
+      .order("name");
 
     if (barberId) {
-      const { data, error } = await supabase
-        .from("team_member_menu_items")
-        .select("id, name, price_cents")
-        .eq("business_id", BUSINESS_ID)
-        .eq("team_member_id", barberId)
-        .eq("is_active", true)
-        .order("name");
-
-      if (!error && data) items = data;
+      query = query.eq("team_member_id", barberId);
     }
 
-    if (!items.length) {
-      const { data, error } = await supabase
-        .from("services")
-        .select("id, name, price")
-        .eq("business_id", BUSINESS_ID)
-        .eq("is_active", true)
-        .order("name");
-
-      if (!error && data) {
-        items = data.map(s => ({
-          id: s.id,
-          name: s.name,
-          price_cents: Math.round(Number(s.price || 0) * 100),
-        }));
-      }
-    }
+    const { data: items, error } = await query;
 
     svcDropdown.innerHTML = "<option value=''>Select Service</option>";
 
-    if (!items.length) {
-      svcDropdown.innerHTML = "<option value=''>No services available</option>";
+    if (error || !items || !items.length) {
+      svcDropdown.innerHTML = "<option value=''>No services available for this selection</option>";
       return;
     }
 
     items.forEach((s) => {
-      const label = `${s.name} ($${money(s.price_cents)})`;
+      // Display duration in the dropdown for clarity
+      const duration = s.duration_min ? ` - ${s.duration_min}m` : "";
+      const label = `${s.name} ($${money(s.price_cents)}${duration})`;
       svcDropdown.appendChild(new Option(label, s.id));
     });
   };
@@ -406,7 +393,7 @@
   document.getElementById("nsdTimeContinue").onclick = () => { setStep(3); loadServices(); };
   document.getElementById("nsdBackToTime").onclick = () => setStep(2);
 
-  // 12. Submit Logic - PATCHED V2.9 (Customer Upsert + Schema Fix) ✅
+  // 12. Submit Logic - V3.0 (Customer Upsert + Pre-flight Check + Strict ID) ✅
   document.getElementById("nsdSubmitBtn").onclick = async () => {
     const btn = document.getElementById("nsdSubmitBtn");
     
@@ -416,24 +403,29 @@
     const clientName = document.getElementById("nsdClientName").value.trim();
     const clientPhone = document.getElementById("nsdClientPhone").value.trim();
     const clientEmail = (document.getElementById("nsdClientEmail")?.value || "").trim();
-    const serviceId = document.getElementById("nsdService").value;
+    const selectedServiceId = document.getElementById("nsdService").value;
 
-    if (!serviceId || !clientName || !clientPhone) {
+    if (!selectedServiceId || !clientName || !clientPhone) {
       alert("Please fill in Name, Phone, and Service.");
       return;
     }
 
-    // Timestamptz Construction
-    const combinedDate = new Date(selectedDate);
-    const [time, modifier] = selectedTimeLabel.split(" ");
-    let [hours, minutes] = time.split(":");
-    if (hours === "12") hours = "00";
-    if (modifier === "PM") hours = parseInt(hours, 10) + 12;
-    combinedDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    const startAt = combinedDate.toISOString();
-
     btn.disabled = true;
-    btn.textContent = "Processing...";
+    btn.textContent = "Verifying...";
+
+    // --- STEP 0: PRE-FLIGHT VALIDATION (Fixes "Booking requires a menu item with a duration") ---
+    const { data: svcRow, error: svcErr } = await supabase
+      .from("team_member_menu_items")
+      .select("id, duration_min")
+      .eq("id", selectedServiceId)
+      .single();
+
+    if (svcErr || !svcRow?.duration_min) {
+      alert("System Error: The selected service has no duration set. Please contact the shop.");
+      btn.disabled = false;
+      btn.textContent = "Confirm Booking";
+      return;
+    }
 
     // --- STEP 1: UPSERT CUSTOMER ---
     const customerPayload = {
@@ -447,7 +439,6 @@
 
     let customerId = null;
 
-    // Only lookup if email exists (Unique Key Constraint Prevention)
     if (clientEmail) {
       const { data: existingCustomer, error: findErr } = await supabase
         .from("customers")
@@ -456,19 +447,17 @@
         .eq("email", clientEmail)
         .single();
 
-      if (findErr && findErr.code !== "PGRST116") { // PGRST116 = No Rows Found
-        alert("System Error (Customer Lookup): " + findErr.message);
+      if (findErr && findErr.code !== "PGRST116") {
+        alert("Customer lookup failed: " + findErr.message);
         btn.disabled = false;
         btn.textContent = "Confirm Booking";
         return;
       }
 
       if (existingCustomer?.id) {
-        // Update existing
         customerId = existingCustomer.id;
         await supabase.from("customers").update(customerPayload).eq("id", customerId);
       } else {
-        // Insert new
         const { data: newCustomer, error: createErr } = await supabase
           .from("customers")
           .insert([customerPayload])
@@ -476,27 +465,32 @@
           .single();
 
         if (createErr) {
-          alert("Error creating customer record: " + createErr.message);
+          alert("Customer create failed: " + createErr.message);
           btn.disabled = false;
           btn.textContent = "Confirm Booking";
           return;
         }
         customerId = newCustomer.id;
       }
-    } else {
-      // Logic for Phone-only users (Optional: Create customer without email if schema allows)
-      // For now, we leave customerId null if no email, unless your DB requires it.
-      // If DB requires customer_id, you must enable phone-based upsert here too.
     }
 
     // --- STEP 2: CREATE BOOKING ---
+    // Timestamptz Construction
+    const combinedDate = new Date(selectedDate);
+    const [time, modifier] = selectedTimeLabel.split(" ");
+    let [hours, minutes] = time.split(":");
+    if (hours === "12") hours = "00";
+    if (modifier === "PM") hours = parseInt(hours, 10) + 12;
+    combinedDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    const startAt = combinedDate.toISOString();
+
     const payload = {
       business_id: BUSINESS_ID,
       team_member_id: document.getElementById("nsdBarber").value || null,
 
-      // Dual-mapped IDs (as per schema patch request)
-      menu_item_id: serviceId,
-      team_member_menu_item_id: serviceId,
+      // STRICT MAPPING: We only send the ID to the correct column now
+      menu_item_id: selectedServiceId, // Some triggers might still need this, but we know it's a team item ID
+      team_member_menu_item_id: svcRow.id, // Verified ID from DB
 
       start_at: startAt,
       date_only: dateOnly,
@@ -512,9 +506,10 @@
       status: "booked",
       source: "public_booking",
 
-      customer_id: customerId, // ✅ LINKED: Prevents duplicates
+      customer_id: customerId,
     };
 
+    btn.textContent = "Processing...";
     const { error } = await supabase.from("bookings").insert([payload]);
 
     if (error) {
