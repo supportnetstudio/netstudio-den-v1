@@ -1,9 +1,9 @@
 /**
- * NetStudio Booking Engine v3.0
- * Changes: 
- * 1. Customer Upsert (Prevents Unique Key Violation)
- * 2. Strict Service Logic (Only team_member_menu_items allowed)
- * 3. Pre-flight Validation (Ensures duration exists before insert)
+ * NetStudio Booking Engine v3.1
+ * Fixes: 
+ * 1. Dual ID Resolution (Resolves "Booking requires duration" trigger error)
+ * 2. Customer Upsert (Prevents Unique Key Violation)
+ * 3. Strict Service Logic (Only team_member_menu_items allowed)
  */
 (async function () {
   if (window.__NSD_BOOKING_INIT__) return;
@@ -393,7 +393,7 @@
   document.getElementById("nsdTimeContinue").onclick = () => { setStep(3); loadServices(); };
   document.getElementById("nsdBackToTime").onclick = () => setStep(2);
 
-  // 12. Submit Logic - V3.0 (Customer Upsert + Pre-flight Check + Strict ID) ✅
+  // 12. Submit Logic - V3.1 (Fixed: Dual ID Resolution for Triggers) ✅
   document.getElementById("nsdSubmitBtn").onclick = async () => {
     const btn = document.getElementById("nsdSubmitBtn");
     
@@ -413,10 +413,11 @@
     btn.disabled = true;
     btn.textContent = "Verifying...";
 
-    // --- STEP 0: PRE-FLIGHT VALIDATION (Fixes "Booking requires a menu item with a duration") ---
+    // --- STEP 0: PRE-FLIGHT VALIDATION + PARENT ID LOOKUP ---
+    // We explicitly fetch 'menu_item_id' (parent) to satisfy the DB trigger
     const { data: svcRow, error: svcErr } = await supabase
       .from("team_member_menu_items")
-      .select("id, duration_min")
+      .select("id, duration_min, menu_item_id") 
       .eq("id", selectedServiceId)
       .single();
 
@@ -475,7 +476,6 @@
     }
 
     // --- STEP 2: CREATE BOOKING ---
-    // Timestamptz Construction
     const combinedDate = new Date(selectedDate);
     const [time, modifier] = selectedTimeLabel.split(" ");
     let [hours, minutes] = time.split(":");
@@ -488,9 +488,9 @@
       business_id: BUSINESS_ID,
       team_member_id: document.getElementById("nsdBarber").value || null,
 
-      // STRICT MAPPING: We only send the ID to the correct column now
-      menu_item_id: selectedServiceId, // Some triggers might still need this, but we know it's a team item ID
-      team_member_menu_item_id: svcRow.id, // Verified ID from DB
+      // V3.1 FIX: Send both IDs explicitly
+      menu_item_id: svcRow.menu_item_id, // Satisfies trigger checking 'services' table
+      team_member_menu_item_id: svcRow.id, // Binds specific staff price/duration
 
       start_at: startAt,
       date_only: dateOnly,
