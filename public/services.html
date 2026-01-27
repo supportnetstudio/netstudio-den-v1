@@ -133,9 +133,12 @@
       <div class="logo">THE <span>DEN</span></div>
       
       <nav class="nav-links">
-        <a href="index.html">Home</a>
-        <a href="about.html">About</a>
-        <a href="services.html" class="active">Services</a>
+        <a class="js-nav" data-file="index.html">Home</a>
+        <a class="js-nav" data-file="about.html">About</a>
+        <a class="js-nav" data-file="services.html">Services</a>
+        <a class="js-nav" data-file="gallery.html">Gallery</a>
+        <a class="js-nav" data-file="team.html">Team</a>
+        <a class="js-nav" data-file="contact.html">Contact</a>
       </nav>
 
       <a href="#" onclick="openBooking(); return false;" class="btn">Book Now</a>
@@ -170,6 +173,39 @@
   </footer>
 
   <script>
+    function nsSlug() {
+      const p = new URLSearchParams(location.search);
+      // Fallback to internal regex if param is malformed (?bnet-studio-barbershop)
+      const ok = p.get("b");
+      if (ok) return ok.toLowerCase();
+      const m = location.search.match(/^\?b(?:=|\+)?([^&]+)/i);
+      return m ? decodeURIComponent(m[1]).toLowerCase() : "";
+    }
+
+    function nsHref(file) {
+      const b = nsSlug();
+      const path = file.startsWith("/") ? file : "/" + file;
+      if (!b) return path;
+      return `${path}?b=${encodeURIComponent(b)}`;
+    }
+
+    function nsCurrentFile() {
+      const p = location.pathname.split("/").pop();
+      return p || "index.html";
+    }
+
+    // Initialize Navigation
+    document.querySelectorAll(".js-nav").forEach(a => {
+      const file = a.getAttribute("data-file");
+      a.setAttribute("href", nsHref(file));
+      
+      // Active state
+      if (file === nsCurrentFile()) a.classList.add("active");
+      else a.classList.remove("active");
+    });
+  </script>
+
+  <script>
     if (window.lucide) {
       lucide.createIcons();
     }
@@ -197,31 +233,13 @@
     }
 
     // =====================================
-    // BULLETPROOF SLUG RESOLUTION
-    // =====================================
-    function nsGetSlugFromHost() {
-      const s = location.search || "";
-      const p = new URLSearchParams(s);
-      const ok = p.get("b");
-      if (ok) return ok.toLowerCase();
-
-      const m = s.match(/^\?b(?:=|\+)?([^&]+)/i);
-      if (m && m[1]) return decodeURIComponent(m[1]).toLowerCase();
-
-      const host = location.hostname.toLowerCase();
-      if (host.endsWith(".netstudio.app")) return host.split(".")[0];
-
-      return null;
-    }
-
-    // =====================================
     // SUPABASE BOOTSTRAP
     // =====================================
     window.NS = {
       ...(window.NS || {}),
       SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-      BUSINESS_SLUG: nsGetSlugFromHost()
+      BUSINESS_SLUG: nsSlug()
     };
 
     const sb = window.supabaseClient || window.supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
@@ -249,7 +267,6 @@
     async function loadMenuItems() {
       if (!window.BUSINESS_ID) return;
 
-      // Removed display_order to bypass column 42703 error
       const { data: items, error } = await sb
         .from("menu_items")
         .select("*")
