@@ -374,7 +374,7 @@
         if (data.phone != null && $("visit_phone")) $("visit_phone").textContent = data.phone;
 
         if (data.map_q && $("visit_map")) {
-          const mapUrl = `https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodeURIComponent(data.map_q)}`;
+          const mapUrl = `https://maps.google.com/maps?q=$${encodeURIComponent(data.map_q)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
           $("visit_map").src = mapUrl;
         }
 
@@ -423,8 +423,6 @@
       }
 
       load().then(data => {
-        // ✅ Always reveal the template.
-        // If no content_json exists yet, apply defaults via an empty object.
         apply(data || {});
       });
       
