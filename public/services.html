@@ -187,25 +187,46 @@
     // SUPABASE + BUSINESS BOOTSTRAP
     // =====================================
 
-    function nsGetSlugFromHost() {
+    function nsResolveSlug() {
       const host = location.hostname.toLowerCase();
+
+      // prod: {slug}.netstudio.app
       if (host.endsWith(".netstudio.app")) return host.split(".")[0];
-      const qp = new URLSearchParams(location.search).get("b");
-      if (qp) return qp.toLowerCase();
-      return "the-den"; // localhost fallback
+
+      // read b from URL (even if something weird happens)
+      const url = new URL(location.href);
+      const qp = url.searchParams.get("b");
+      if (qp) {
+        const s = qp.toLowerCase();
+        sessionStorage.setItem("ns_slug", s); // persist for internal nav
+        return s;
+      }
+
+      // fallback: recover from session
+      const saved = sessionStorage.getItem("ns_slug");
+      if (saved) return saved;
+
+      return "the-den";
     }
 
-    const NS = window.NS || {
+    // FORCE SET
+    window.NS = {
+      ...(window.NS || {}),
       SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-      BUSINESS_SLUG: nsGetSlugFromHost()
+      BUSINESS_SLUG: nsResolveSlug()
     };
 
-    const sb = window.supabaseClient || window.supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
+    console.log("SLUG DEBUG:", {
+      href: location.href,
+      search: location.search,
+      slug: window.NS.BUSINESS_SLUG
+    });
+
+    const sb = window.supabaseClient || window.supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
     window.supabaseClient = sb;
 
     async function nsLoadBusinessId() {
-      // if already set by a shared boot somewhere, use it
       const existing = document.body.dataset.businessId || window.BUSINESS_ID;
       if (existing) {
         window.BUSINESS_ID = existing;
@@ -216,11 +237,11 @@
       const { data, error } = await sb
         .from("business")
         .select("id")
-        .eq("slug", NS.BUSINESS_SLUG)
+        .eq("slug", window.NS.BUSINESS_SLUG)
         .maybeSingle();
 
       if (error || !data) {
-        console.warn("Business not found:", NS.BUSINESS_SLUG, error);
+        console.warn("Business not found:", window.NS.BUSINESS_SLUG, error);
         return null;
       }
 
@@ -267,14 +288,12 @@
         return;
       }
 
-      // Group by category
       const groups = {};
       items.forEach(item => {
         const cat = (item.category || "Other").trim();
         (groups[cat] ||= []).push(item);
       });
 
-      // Render categories in insertion order based on first appearance
       Object.entries(groups).forEach(([category, services]) => {
         const catBlock = document.createElement("div");
         catBlock.className = "service-category";
@@ -311,9 +330,6 @@
       });
     }
 
-    // =====================================
-    // INIT
-    // =====================================
     (async () => {
       await nsLoadBusinessId();
       await loadMenuItems();
