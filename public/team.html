@@ -231,7 +231,8 @@
         const name = m.name || "Barber";
         const role = m.role || "Barber";
         const img  = m.profile_image_url || "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&q=80&w=600";
-        const bio  = m.bio || m.specialties || "Professional barber at The Den.";
+        // ✅ PATCH: Removed reference to m.specialties
+        const bio  = m.bio || "Professional barber at The Den.";
 
         grid.insertAdjacentHTML("beforeend", `
           <div class="barber-card">
@@ -262,9 +263,10 @@
       const { data: members } = await sb
         .schema("public")
         .from("team_members")
-        .select("id, name, role, bio, specialties, profile_image_url")
+        // ✅ PATCH: Removed specialties from select list
+        .select("id, name, role, bio, profile_image_url, user_id, created_at")
         .eq("business_id", biz.id)
-        .not("user_id", "is", null) // ✅ The crucial filter
+        .not("user_id", "is", null)
         .order("created_at", { ascending: true });
 
       renderCrew(members || []);
