@@ -144,9 +144,9 @@
   </header>
 
   <section class="container team-hero">
-    <span class="section-title">The Brotherhood</span>
-    <h1>Meet The Crew</h1>
-    <p style="color: var(--text-muted); max-width: 500px; margin: 0 auto;">
+    <span class="section-title" id="team_kicker">Meet The Crew</span>
+    <h1 id="team_heading">Meet The Crew</h1>
+    <p id="team_text" style="color: var(--text-muted); max-width: 500px; margin: 0 auto;">
       Master barbers dedicated to the craft. We don't just cut hair; we build confidence. Pick your barber and lock in your time.
     </p>
   </section>
@@ -318,6 +318,43 @@
       renderCrew(list, profileMap);
     }
 
+    // ✅ PATCH: Content Loader for Team Hero
+    async function loadTeamHeroCopy() {
+      if (!BUSINESS_SLUG) return;
+
+      const { data: biz } = await sb
+        .schema("public")
+        .from("business")
+        .select("id")
+        .eq("slug", BUSINESS_SLUG)
+        .maybeSingle();
+
+      if (!biz?.id) return;
+
+      const { data: site } = await sb
+        .schema("public")
+        .from("business_sites")
+        .select("content_json")
+        .eq("business_id", biz.id)
+        .eq("template_key", "den_v1")
+        .maybeSingle();
+
+      if (!site?.content_json) return;
+
+      const team = (site.content_json.team || {});
+      const kicker  = (team.kicker  || site.content_json.team_kicker  || "Meet The Crew").trim();
+      const heading = (team.heading || site.content_json.team_heading || "Meet The Crew").trim();
+      const text    = (team.text    || site.content_json.team_text    || "").trim();
+
+      const elK = document.getElementById("team_kicker");
+      const elH = document.getElementById("team_heading");
+      const elT = document.getElementById("team_text");
+
+      if (elK && kicker) elK.textContent = kicker;
+      if (elH && heading) elH.textContent = heading;
+      if (elT && text) elT.textContent = text;
+    }
+
     window.openBookingWithStaff = function(staffId) {
       if (!window.openBooking) return;
       window.openBooking({ staff_id: staffId });
@@ -327,6 +364,7 @@
     console.log("DEN_TEAM BUILD ✅ v999", Date.now());
 
     nsWireHeaderNav();
+    loadTeamHeroCopy(); // ✅ Call the content loader
     loadCrew();
 
     if (window.lucide) lucide.createIcons();
