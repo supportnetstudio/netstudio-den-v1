@@ -134,9 +134,9 @@
   <main class="container">
     <div class="contact-grid">
       <div>
-        <span class="section-title">Get In Touch</span>
-        <h2>Stop By The Shop</h2>
-        <p style="color:var(--text-muted); margin-bottom: 40px;">
+        <span class="section-title" id="contact_kicker">Get In Touch</span>
+        <h2 id="contact_heading">Stop By The Shop</h2>
+        <p id="contact_text" style="color:var(--text-muted); margin-bottom: 40px;">
           Got a question about a cut? Looking for a specific barber? Drop us a line or pull up to the shop.
         </p>
 
@@ -145,21 +145,25 @@
             <i data-lucide="map-pin" class="contact-icon"></i>
             <div>
               <strong style="display:block; margin-bottom:4px;">Location</strong>
-              <span style="color:var(--text-muted); font-size:14px;">3904 Bainbridge Blvd<br>Chesapeake, VA 23324</span>
+              <span id="contact_address" style="color:var(--text-muted); font-size:14px;">
+                3904 Bainbridge Blvd<br>Chesapeake, VA 23324
+              </span>
             </div>
           </div>
           <div class="contact-item">
             <i data-lucide="phone" class="contact-icon"></i>
             <div>
               <strong style="display:block; margin-bottom:4px;">Phone</strong>
-              <a href="tel:7575432966" style="color:var(--text-muted); font-size:14px; text-decoration: none;">(757) 543-2966</a>
+              <a id="contact_phone_link" href="tel:7575432966" style="color:var(--text-muted); font-size:14px; text-decoration: none;">
+                <span id="contact_phone_text">(757) 543-2966</span>
+              </a>
             </div>
           </div>
         </div>
 
         <div style="display:flex; flex-direction:column; gap:14px; margin-top:10px;">
-          <a href="tel:7575432966" class="btn" style="width:100%">Call The Shop</a>
-          <a href="sms:+17575432966" class="btn btn-outline" style="width:100%">Text Us</a>
+          <a id="action_call_btn" href="tel:7575432966" class="btn" style="width:100%">Call The Shop</a>
+          <a id="action_text_btn" href="sms:+17575432966" class="btn btn-outline" style="width:100%">Text Us</a>
           <button type="button" class="btn btn-outline" onclick="openBooking(); return false;" style="width:100%">Book An Appointment</button>
           <p style="color:var(--text-muted); font-size:12px; text-align:center; margin-top:10px;">
             Fastest response is call or text. Walk-ins welcome.
@@ -214,7 +218,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
-    /* --- ✅ PATCH: Route + Slug Logic (nsGetSlugFromHost + nsLinkWithSlug) --- */
+    /* --- CONFIG + SLUG DETECTION --- */
     function nsGetSlugFromHost() {
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return qp.toLowerCase();
@@ -228,7 +232,8 @@
     window.NS = window.NS || {
       SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-      BUSINESS_SLUG: BUSINESS_SLUG
+      BUSINESS_SLUG: BUSINESS_SLUG,
+      TEMPLATE_KEY: "den_v1"
     };
 
     const sb = supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
@@ -239,7 +244,6 @@
       const host = location.hostname.toLowerCase();
       if (host.endsWith(".netstudio.app") && host.split(".")[0] === BUSINESS_SLUG) return targetPath;
       
-      // Construct URL carefully to preserve origin
       const u = new URL(targetPath, location.origin);
       u.searchParams.set("b", BUSINESS_SLUG);
       return u.pathname + "?" + u.searchParams.toString() + u.hash;
@@ -269,7 +273,47 @@
       });
     }
 
-    /* --- HOURS LOGIC (Identical to Home) --- */
+    /* --- CONTENT INJECTOR (Contact) --- */
+    function applyContactContent(content) {
+      const c = (content && content.contact) || {};
+      const pick = (...vals) => {
+        for (const v of vals) {
+          if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+        }
+        return "";
+      };
+
+      const kicker  = pick(c.kicker, "Get In Touch");
+      const heading = pick(c.heading, "Stop By The Shop");
+      const blurb   = pick(c.blurb, "Got a question about a cut? Looking for a specific barber? Drop us a line or pull up to the shop.");
+      const addressHTML = pick(c.address_html, "3904 Bainbridge Blvd<br>Chesapeake, VA 23324");
+      const phonePretty = pick(c.phone, "(757) 543-2966");
+
+      const $ = (id) => document.getElementById(id);
+
+      if ($("contact_kicker"))  $("contact_kicker").textContent = kicker;
+      if ($("contact_heading")) $("contact_heading").textContent = heading;
+      if ($("contact_text"))    $("contact_text").textContent = blurb; // Note: id is contact_text in HTML
+
+      if ($("contact_address")) {
+        $("contact_address").innerHTML = addressHTML; 
+      }
+
+      if (phonePretty) {
+        // Strip non-digits for href
+        const tel = String(phonePretty).replace(/[^\d]/g, "");
+        
+        // Update main contact display
+        if ($("contact_phone_text")) $("contact_phone_text").textContent = phonePretty;
+        if ($("contact_phone_link") && tel) $("contact_phone_link").setAttribute("href", `tel:${tel}`);
+
+        // Update Action Buttons
+        if ($("action_call_btn") && tel) $("action_call_btn").setAttribute("href", `tel:${tel}`);
+        if ($("action_text_btn") && tel) $("action_text_btn").setAttribute("href", `sms:+1${tel}`); // Assuming US +1 for SMS
+      }
+    }
+
+    /* --- HOURS LOGIC --- */
     function nsDayOrder(d){
       const m = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7 };
       return m[String(d || "").toLowerCase()] || 99;
@@ -329,7 +373,6 @@
     /* --- INIT --- */
     (async () => {
       try {
-        // Wire Navigation First
         nsWireHeaderNav();
 
         if (!NS.BUSINESS_SLUG) {
@@ -337,6 +380,7 @@
            return;
         }
 
+        // 1. Get Business ID
         const { data: biz, error } = await sb
           .from("business")
           .select("id")
@@ -348,11 +392,23 @@
         document.getElementById("nsdBusiness")?.setAttribute("data-business-id", biz.id);
         document.body.dataset.businessId = biz.id;
 
+        // 2. Load Hours
         const hours = await loadHours(biz.id);
         renderHoursFromRows(hours || []);
 
+        // 3. Load Content (Contact Info)
+        const siteRes = await sb
+          .from("business_sites")
+          .select("content_json")
+          .eq("business_id", biz.id)
+          .eq("template_key", NS.TEMPLATE_KEY)
+          .maybeSingle();
+
+        const content = siteRes.data?.content_json || {};
+        applyContactContent(content);
+
       } catch (e) {
-        console.error("Hours load failed:", e);
+        console.error("Page Load Error:", e);
       }
     })();
   </script>
