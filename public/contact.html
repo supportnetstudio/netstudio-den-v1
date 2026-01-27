@@ -45,7 +45,11 @@
       width: auto;
     }
     .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-    form .btn { width: 100%; }
+    
+    .btn-outline {
+      background: transparent; border: 1px solid var(--glass-border); color: var(--text-muted);
+    }
+    .btn-outline:hover { border-color: white; color: white; }
 
     .section-title {
       font-size: 12px; color: var(--accent); letter-spacing: 0.2em;
@@ -86,14 +90,6 @@
     .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 40px; }
     @media(max-width: 768px) { .contact-grid { grid-template-columns: 1fr; gap: 40px; } }
 
-    .form-group { margin-bottom: 20px; }
-    .form-input, .form-textarea {
-      width: 100%; background: var(--glass); border: 1px solid var(--glass-border);
-      padding: 16px; border-radius: 8px; color: white; font-family: var(--font-body);
-      font-size: 14px; outline: none; transition: 0.3s;
-    }
-    .form-input:focus, .form-textarea:focus { border-color: var(--accent); background: rgba(255,255,255,0.08); }
-    
     .contact-item { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
     .contact-icon { color: var(--accent); margin-top: 2px; width: 18px; height: 18px; flex: 0 0 18px; }
 
@@ -160,19 +156,21 @@
           </div>
         </div>
 
-        <form onsubmit="event.preventDefault(); showMsg('Message sent (demo).');">
-          <div class="form-group">
-            <input type="text" class="form-input" placeholder="Your Name" required>
-          </div>
-          <div class="form-group">
-            <input type="email" class="form-input" placeholder="Email Address" required>
-          </div>
-          <div class="form-group">
-            <textarea class="form-textarea" rows="4" placeholder="How can we help?" required></textarea>
-          </div>
-          <button type="submit" class="btn">Send Message</button>
-          <div id="formMsg" style="margin-top:10px; font-size:12px; color:var(--text-muted); text-align: center;"></div>
-        </form>
+        <div style="display:flex; flex-direction:column; gap:14px; margin-top:10px;">
+          <a href="tel:7575432966" class="btn" style="width:100%">
+            Call The Shop
+          </a>
+          <a href="sms:17575432966" class="btn btn-outline" style="width:100%">
+            Text Us
+          </a>
+          <button class="btn btn-outline" onclick="openBooking();" style="width:100%">
+            Book An Appointment
+          </button>
+          <p style="color:var(--text-muted); font-size:12px; text-align:center; margin-top:10px;">
+            Fastest response is call or text. Walk-ins welcome.
+          </p>
+        </div>
+
       </div>
 
       <div>
@@ -217,9 +215,7 @@
       nav.classList.toggle('open');
     }
 
-    function showMsg(t){ const el=document.getElementById("formMsg"); if(el) el.textContent=t; }
-
-    // 2) Booking Script Stubs - Initialized globally
+    // ✅ PATCH: Removed showMsg(), kept booking stubs
     window.openBooking = window.openBooking || function () { console.warn("Booking script not yet loaded."); };
     window.closeBooking = window.closeBooking || function () { console.warn("Booking script not yet loaded."); };
   </script>
