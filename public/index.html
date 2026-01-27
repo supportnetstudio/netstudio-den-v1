@@ -267,7 +267,7 @@
       function renderHoursFromRows(rows){
         const el = document.getElementById("hours_list");
         if (!el) return;
-        if (!rows || !rows.length) return; // keep fallback in HTML
+        if (!rows || !rows.length) return; 
 
         const sorted = [...rows].sort((a,b) => nsDayOrder(a.day_of_week) - nsDayOrder(b.day_of_week));
         el.innerHTML = sorted.map(r => {
@@ -285,46 +285,74 @@
       }
 
       function apply(data) {
-        if (!data) return;
+        const c = data || {};
         const $ = (id) => document.getElementById(id);
 
-        if (data.name) {
-          const names = String(data.name).trim().split(/\s+/);
+        const pick = (...vals) => {
+          for (const v of vals) {
+            if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+          }
+          return "";
+        };
+
+        const home = c.home || {};
+        const heroN = home.hero || {};
+        const ctaN  = home.primary_cta || {};
+
+        // BRAND
+        const name = pick(c.name, home.name);
+        if (name) {
+          const names = String(name).trim().split(/\s+/);
           const first = names[0] || "";
-          const rest = names.slice(1).join(" ");
+          const rest  = names.slice(1).join(" ");
           const logoHTML = rest ? `${first} <span>${rest}</span>` : `${first}`;
-          if($("header_logo")) $("header_logo").innerHTML = logoHTML;
-          if($("footer_logo")) $("footer_logo").innerHTML = logoHTML;
-          if($("copyright_name")) $("copyright_name").textContent = data.name;
-          if($("visit_name")) $("visit_name").textContent = data.name;
+          if ($("header_logo")) $("header_logo").innerHTML = logoHTML;
+          if ($("footer_logo")) $("footer_logo").innerHTML = logoHTML;
+          if ($("copyright_name")) $("copyright_name").textContent = name;
+          if ($("visit_name")) $("visit_name").textContent = name;
         }
 
+        // HERO
         const hero = document.querySelector(".hero");
-        if (data.hero_bg && hero) hero.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${data.hero_bg}')`;
+        const heroBg = pick(c.hero_bg, heroN.bg);
+        if (heroBg && hero) {
+          hero.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${heroBg}')`;
+        }
 
-        if ($("hero_kicker")) $("hero_kicker").innerHTML = data.hero_kicker || "Established 2025";
-        if ($("hero_title")) $("hero_title").innerHTML = data.hero_title || "Everybody's<br>Barber Shop";
-        if ($("hero_sub")) $("hero_sub").innerHTML = data.hero_sub || "";
-        if ($("hero_cta_text")) $("hero_cta_text").textContent = data.hero_cta_text || "Book Appointment";
-        if (data.hero_cta_href && $("hero_cta")) $("hero_cta").setAttribute("href", data.hero_cta_href);
+        if ($("hero_kicker")) $("hero_kicker").innerHTML = pick(c.hero_kicker, heroN.kicker, "Established 2025");
+        if ($("hero_title"))  $("hero_title").innerHTML  = pick(c.hero_title,  heroN.title,  "Everybody's<br>Barber Shop");
+        if ($("hero_sub"))    $("hero_sub").innerHTML    = pick(c.hero_sub,    heroN.subtitle, `"It feels like back home in here."<br>Traditional cuts, modern vibe.`);
+        if ($("hero_cta_text")) $("hero_cta_text").textContent = pick(c.hero_cta_text, ctaN.text, "Book Appointment");
 
-        if (data.about_kicker && $("about_kicker")) $("about_kicker").textContent = data.about_kicker;
-        if (data.about_heading && $("about_heading")) $("about_heading").textContent = data.about_heading;
-        if (data.about_text && $("about_text")) $("about_text").textContent = data.about_text;
+        const ctaHref = pick(c.hero_cta_href, ctaN.href, "#");
+        if ($("hero_cta")) $("hero_cta").setAttribute("href", ctaHref);
 
-        if ($("hiring_card")) $("hiring_card").style.display = (data.hiring_enabled === false) ? "none" : "";
-        if (data.hiring_kicker && $("hiring_kicker")) $("hiring_kicker").textContent = data.hiring_kicker;
-        if (data.hiring_title && $("hiring_title")) $("hiring_title").textContent = data.hiring_title;
-        if (data.hiring_text && $("hiring_text")) $("hiring_text").textContent = data.hiring_text;
-        if (data.hiring_cta_text && $("hiring_cta_text")) $("hiring_cta_text").textContent = data.hiring_cta_text;
-        if (data.hiring_cta_href && $("hiring_cta")) $("hiring_cta").setAttribute("href", data.hiring_cta_href);
+        // ABOUT
+        if ($("about_kicker"))  $("about_kicker").textContent  = pick(c.about_kicker, "About Us");
+        if ($("about_heading")) $("about_heading").textContent = pick(c.about_heading, "A Back Home Kinda Thang");
+        if ($("about_text")) $("about_text").textContent = pick(c.about_text, c.about, $("about_text").textContent);
 
-        if (data.visit_kicker && $("visit_kicker")) $("visit_kicker").textContent = data.visit_kicker;
-        if (data.address_html && $("visit_address")) $("visit_address").innerHTML = data.address_html;
-        if (data.phone && $("visit_phone")) $("visit_phone").textContent = data.phone;
+        // HIRING
+        const hiringEnabled = (c.hiring_enabled === undefined) ? true : !!c.hiring_enabled;
+        if ($("hiring_card")) $("hiring_card").style.display = hiringEnabled ? "" : "none";
+        if ($("hiring_kicker")) $("hiring_kicker").textContent = pick(c.hiring_kicker, "Join The Team");
+        if ($("hiring_title"))  $("hiring_title").textContent  = pick(c.hiring_title,  "We Are Hiring Barbers");
+        if ($("hiring_text"))   $("hiring_text").textContent   = pick(c.hiring_text,   "Looking for a chair in a high-traffic shop with a great culture?");
+        if ($("hiring_cta_text")) $("hiring_cta_text").textContent = pick(c.hiring_cta_text, "Apply Here");
+        if ($("hiring_cta")) $("hiring_cta").setAttribute("href", pick(c.hiring_cta_href, "#"));
 
-        if (data.map_q && $("visit_map")) {
-          const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(data.map_q)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
+        // VISIT
+        if ($("visit_kicker")) $("visit_kicker").textContent = pick(c.visit_kicker, "Visit Us");
+        const addrHTML = pick(c.address_html, "");
+        const addrText = pick(c.address, "");
+        if ($("visit_address")) {
+          if (addrHTML) $("visit_address").innerHTML = addrHTML;
+          else if (addrText) $("visit_address").textContent = addrText;
+        }
+        if ($("visit_phone")) $("visit_phone").textContent = pick(c.phone, "");
+
+        if (c.map_q && $("visit_map")) {
+          const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(c.map_q)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
           $("visit_map").src = mapUrl;
         }
 
