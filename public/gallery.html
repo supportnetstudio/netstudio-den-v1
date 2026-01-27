@@ -306,7 +306,7 @@
         if (pErr) {
           console.warn("gallery_image profile error:", pErr);
         } else {
-          // newest per team_member_id wins
+          // newest per team_member_id wins (because we ordered newest first)
           (pics || []).forEach(r => {
             const tm = String(r.team_member_id || "").trim();
             if (!tm) return;
