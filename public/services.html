@@ -20,7 +20,7 @@
       --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     }
 
-    /* --- RESET & MOBILE GUARD (FIX #3) --- */
+    /* --- RESET & MOBILE GUARD --- */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
     html, body { 
@@ -66,7 +66,7 @@
     }
     h2 { font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 40px; }
 
-    /* --- HEADER (FIX #2) --- */
+    /* --- HEADER --- */
     header {
       position: fixed; top: 0; width: 100%; z-index: 100;
       background: rgba(0,0,0,0.8); backdrop-filter: blur(12px);
@@ -120,7 +120,7 @@
 
     /* --- RESPONSIVE FIXES --- */
     @media (max-width: 768px) {
-      .nav-links { display: none; } /* Hide only secondary links */
+      .nav-links { display: none; } 
       .service-item { flex-direction: column; align-items: flex-start; gap: 15px; }
       .svc-right { width: 100%; justify-content: space-between; }
     }
@@ -143,50 +143,10 @@
   </header>
 
   <main class="container" style="margin-top: 40px;">
-    
     <span class="section-title">The Menu</span>
     <h2>Service Price List</h2>
 
-    <div class="service-category">
-      <div class="cat-title">Adults</div>
-      
-      <div class="service-item">
-        <div>
-          <div class="svc-name">Regular Cut</div>
-          <div class="svc-desc">Standard scissor or clipper cut.</div>
-        </div>
-        <div class="svc-right">
-          <div class="svc-price">$20.00</div>
-          <button class="btn" onclick="openBooking(); return false;">Book</button>
-        </div>
-      </div>
-
-      <div class="service-item">
-        <div>
-          <div class="svc-name">Fade Cut</div>
-          <div class="svc-desc">Skin fade, taper fade, or bald fade.</div>
-        </div>
-        <div class="svc-right">
-          <div class="svc-price">$25.00</div>
-          <button class="btn" onclick="openBooking(); return false;">Book</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="service-category">
-      <div class="cat-title">Grooming</div>
-      
-      <div class="service-item">
-        <div>
-          <div class="svc-name">Beard Trim</div>
-          <div class="svc-desc">Shape, trim, and hydrate.</div>
-        </div>
-        <div class="svc-right">
-          <div class="svc-price">$15.00</div>
-          <button class="btn" onclick="openBooking(); return false;">Book</button>
-        </div>
-      </div>
-    </div>
+    <div id="servicesMount"></div>
 
     <div style="background: rgba(239, 68, 68, 0.05); border: 1px dashed var(--accent); border-radius: 12px; padding: 30px; text-align: center; margin-top: 60px;">
       <h3 style="color: var(--accent); font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.1em;">Walk-Ins Welcome</h3>
@@ -195,7 +155,6 @@
         <br><strong>Open Mon-Sat. Closed Sunday.</strong>
       </p>
     </div>
-
   </main>
 
   <footer>
@@ -215,14 +174,150 @@
       lucide.createIcons();
     }
 
-    // Safe stub logic: Never hard-override the engine
-    window.openBooking = window.openBooking || function() {
-      console.warn("Net Studio booking engine not yet loaded.");
-      // Fallback if the script fails to load
-      // window.location.href = "https://booksy.com/en-us/";
+    window.openBooking = window.openBooking || function(id) {
+      console.warn("Net Studio booking engine not yet loaded. ID:", id);
     };
     
     window.closeBooking = window.closeBooking || function() {};
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // =====================================
+    // SUPABASE + BUSINESS BOOTSTRAP
+    // =====================================
+
+    function nsGetSlugFromHost() {
+      const host = location.hostname.toLowerCase();
+      if (host.endsWith(".netstudio.app")) return host.split(".")[0];
+      const qp = new URLSearchParams(location.search).get("b");
+      if (qp) return qp.toLowerCase();
+      return "the-den"; // localhost fallback
+    }
+
+    const NS = window.NS || {
+      SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
+      BUSINESS_SLUG: nsGetSlugFromHost()
+    };
+
+    const sb = window.supabaseClient || window.supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
+    window.supabaseClient = sb;
+
+    async function nsLoadBusinessId() {
+      // if already set by a shared boot somewhere, use it
+      const existing = document.body.dataset.businessId || window.BUSINESS_ID;
+      if (existing) {
+        window.BUSINESS_ID = existing;
+        document.body.dataset.businessId = existing;
+        return existing;
+      }
+
+      const { data, error } = await sb
+        .from("business")
+        .select("id")
+        .eq("slug", NS.BUSINESS_SLUG)
+        .maybeSingle();
+
+      if (error || !data) {
+        console.warn("Business not found:", NS.BUSINESS_SLUG, error);
+        return null;
+      }
+
+      window.BUSINESS_ID = data.id;
+      document.body.dataset.businessId = data.id;
+      return data.id;
+    }
+
+    // =====================================
+    // SERVICES RENDER ENGINE (menu_items)
+    // =====================================
+
+    async function loadMenuItems() {
+      const businessId = window.BUSINESS_ID || document.body.dataset.businessId;
+      if (!businessId) return;
+
+      const { data: items, error } = await sb
+        .from("menu_items")
+        .select("*")
+        .eq("business_id", businessId)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (error) {
+        console.error("Error loading menu items:", error);
+        return;
+      }
+
+      renderMenuItems(items || []);
+    }
+
+    function renderMenuItems(items) {
+      const mount = document.getElementById("servicesMount");
+      if (!mount) return;
+
+      mount.innerHTML = "";
+
+      if (!items.length) {
+        mount.innerHTML = `
+          <div style="text-align:center; color: var(--text-muted); padding: 40px 0;">
+            No services available right now.
+          </div>
+        `;
+        return;
+      }
+
+      // Group by category
+      const groups = {};
+      items.forEach(item => {
+        const cat = (item.category || "Other").trim();
+        (groups[cat] ||= []).push(item);
+      });
+
+      // Render categories in insertion order based on first appearance
+      Object.entries(groups).forEach(([category, services]) => {
+        const catBlock = document.createElement("div");
+        catBlock.className = "service-category";
+
+        const catTitle = document.createElement("div");
+        catTitle.className = "cat-title";
+        catTitle.textContent = category;
+        catBlock.appendChild(catTitle);
+
+        services.forEach(service => {
+          const name = service.name || "Unnamed Service";
+          const desc = service.description || "";
+          const price =
+            service.price_cents != null ? `$${(service.price_cents / 100).toFixed(2)}` :
+            service.price != null ? `$${Number(service.price).toFixed(2)}` :
+            "";
+
+          const row = document.createElement("div");
+          row.className = "service-item";
+          row.innerHTML = `
+            <div>
+              <div class="svc-name">${name}</div>
+              ${desc ? `<div class="svc-desc">${desc}</div>` : ``}
+            </div>
+            <div class="svc-right">
+              <div class="svc-price">${price}</div>
+              <button class="btn" onclick="openBooking('${service.id}'); return false;">Book</button>
+            </div>
+          `;
+          catBlock.appendChild(row);
+        });
+
+        mount.appendChild(catBlock);
+      });
+    }
+
+    // =====================================
+    // INIT
+    // =====================================
+    (async () => {
+      await nsLoadBusinessId();
+      await loadMenuItems();
+    })();
   </script>
 
   <script src="/assets/js/netstudio_booking.js"></script>
