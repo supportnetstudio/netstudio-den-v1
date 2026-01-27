@@ -112,18 +112,19 @@
 
   <header>
     <div class="container nav-wrap">
-      <a href="index.html#home" class="logo" id="header_logo">THE <span>DEN</span></a>
+      <a href="/" class="logo" id="header_logo">THE <span>DEN</span></a>
       
       <div class="mobile-toggle" onclick="toggleMenu()">
         <i data-lucide="menu"></i>
       </div>
 
       <nav class="nav-links" id="navLinks">
-        <a href="index.html">Home</a>
-        <a href="about.html">About</a>
-        <a href="services.html">Services</a>
-        <a href="gallery.html">Gallery</a>
-        <a href="contact.html" class="active">Contact</a>
+        <a class="nav-link" href="/" data-page="/">Home</a>
+        <a class="nav-link" href="/about" data-page="/about">About</a>
+        <a class="nav-link" href="/services" data-page="/services">Services</a>
+        <a class="nav-link" href="/gallery" data-page="/gallery">Gallery</a>
+        <a class="nav-link" href="/team" data-page="/team">Team</a>
+        <a class="nav-link active" href="/contact" data-page="/contact">Contact</a>
       </nav>
       
       <a href="javascript:void(0)" class="btn header-btn" onclick="openBooking(); return false;">Book Now</a>
@@ -187,7 +188,6 @@
             <div style="color:var(--text-muted); font-size:13px;">Loading hours...</div>
           </div>
         </div>
-
       </div>
     </div>
   </main>
@@ -214,22 +214,62 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
+    /* --- ✅ PATCH: Route + Slug Logic (nsGetSlugFromHost + nsLinkWithSlug) --- */
     function nsGetSlugFromHost() {
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return qp.toLowerCase();
       const host = location.hostname.toLowerCase();
       if (host.endsWith(".netstudio.app")) return host.split(".")[0];
-      return null; // or fallback
+      return null;
     }
+
+    const BUSINESS_SLUG = nsGetSlugFromHost();
 
     window.NS = window.NS || {
       SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-      BUSINESS_SLUG: nsGetSlugFromHost()
+      BUSINESS_SLUG: BUSINESS_SLUG
     };
 
     const sb = supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
 
+    /* --- NAV REWRITER --- */
+    function nsLinkWithSlug(targetPath) {
+      if (!BUSINESS_SLUG) return targetPath;
+      const host = location.hostname.toLowerCase();
+      if (host.endsWith(".netstudio.app") && host.split(".")[0] === BUSINESS_SLUG) return targetPath;
+      
+      // Construct URL carefully to preserve origin
+      const u = new URL(targetPath, location.origin);
+      u.searchParams.set("b", BUSINESS_SLUG);
+      return u.pathname + "?" + u.searchParams.toString() + u.hash;
+    }
+
+    function nsNormalizePath(p) {
+      if (!p) return "/";
+      let x = String(p);
+      if (x.length > 1 && x.endsWith("/")) x = x.slice(0, -1);
+      return x || "/";
+    }
+
+    function nsWireHeaderNav() {
+      const logo = document.getElementById("header_logo");
+      if (logo) logo.setAttribute("href", nsLinkWithSlug("/"));
+
+      document.querySelectorAll("a.nav-link[data-page]").forEach(a => {
+        const page = a.getAttribute("data-page") || "/";
+        a.setAttribute("href", nsLinkWithSlug(page));
+      });
+
+      const currentPath = nsNormalizePath(location.pathname);
+      document.querySelectorAll("a.nav-link[data-page]").forEach(a => {
+        const page = nsNormalizePath(a.getAttribute("data-page") || "/");
+        if (page === currentPath) a.classList.add("active");
+        else a.classList.remove("active");
+      });
+    }
+
+    /* --- HOURS LOGIC (Identical to Home) --- */
     function nsDayOrder(d){
       const m = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7 };
       return m[String(d || "").toLowerCase()] || 99;
@@ -278,7 +318,6 @@
     }
 
     async function loadHours(businessId){
-      // ✅ Using verified column names from your DB (is_closed instead of is_open)
       const { data, error } = await sb
         .from("business_hours")
         .select("day_of_week, open_time, close_time, is_closed")
@@ -287,8 +326,12 @@
       return (error) ? null : data;
     }
 
+    /* --- INIT --- */
     (async () => {
       try {
+        // Wire Navigation First
+        nsWireHeaderNav();
+
         if (!NS.BUSINESS_SLUG) {
            console.warn("No slug found");
            return;
