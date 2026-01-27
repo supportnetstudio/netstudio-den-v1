@@ -19,28 +19,46 @@
       --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     }
 
+    /* --- RESET & MOBILE GUARD --- */
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    html, body { 
+      width: 100%; 
+      max-width: 100%; 
+      overflow-x: hidden; 
+    }
+
     body {
-      background: var(--bg-gradient); color: var(--text-main);
-      font-family: var(--font-body); line-height: 1.6;
-      padding-top: 80px; min-height: 100vh;
-      display: flex; flex-direction: column;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      padding-top: 80px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
     .container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
-    
+
     /* --- HEADER --- */
     header {
       position: fixed; top: 0; width: 100%; z-index: 100;
       background: rgba(0,0,0,0.8); backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--glass-border);
     }
-    .nav-wrap { display: flex; justify-content: space-between; align-items: center; height: 70px; }
-    
-    /* Logo Normalization */
+
+    .nav-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 70px;
+    }
+
+    /* Logo Styling */
     #brandLogo { display: flex; align-items: center; text-decoration: none; }
     #brandLogo img {
-      height: 40px; /* Desktop Size */
+      height: 40px; 
       width: auto;
       display: block;
       object-fit: contain;
@@ -49,10 +67,18 @@
       font-weight: 900; font-size: 20px; text-transform: uppercase; 
       letter-spacing: 0.1em; font-style: italic; color: white;
     }
-    #brandLogo span i { color: var(--accent); font-style: normal; }
-    
+
+    /* Desktop Nav */
     .nav-links { display: flex; gap: 24px; }
-    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 12px; font-weight: 600; text-transform: uppercase; cursor: pointer; }
+    .nav-links a { 
+      color: var(--text-muted); 
+      text-decoration: none; 
+      font-size: 12px; 
+      font-weight: 600; 
+      text-transform: uppercase; 
+      cursor: pointer; 
+      transition: 0.2s;
+    }
     .nav-links a:hover, .nav-links a.active { color: white; }
 
     .btn {
@@ -63,35 +89,54 @@
       text-decoration: none; font-size: 11px; border: none; cursor: pointer;
     }
 
-    /* --- MOBILE REFINEMENT --- */
+    /* --- MOBILE: 2-ROW HEADER --- */
     @media (max-width: 768px) {
       body { padding-top: 130px; }
       header { padding-bottom: 8px; }
-      .nav-wrap { height: auto; flex-direction: column; align-items: center; gap: 10px; padding: 14px 0 10px; }
-      
+      .nav-wrap { 
+        height: auto; 
+        flex-direction: column; 
+        align-items: center; 
+        gap: 10px; 
+        padding: 14px 0 10px; 
+      }
       .nav-links {
-        display: flex; gap: 18px; justify-content: center; width: 100%; padding: 0 10px;
-        overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+        justify-content: center;
+        width: 100%;
+        gap: 15px;
+        flex-wrap: wrap;
       }
-      .nav-links::-webkit-scrollbar { display: none; }
-      .nav-links a { white-space: nowrap; font-size: 11px; letter-spacing: .18em; }
-      
-      #bookBtn { width: 70%; justify-content: center; }
-      
-      /* Mobile Logo Size */
-      #brandLogo img {
-        height: 48px;
-        width: auto;
-      }
+      .nav-links a { font-size: 11px; }
+      #brandLogo img { height: 48px; }
+      #bookBtn { width: 80%; justify-content: center; }
     }
 
-    /* --- SERVICE STYLES --- */
+    /* --- SERVICES --- */
+    main { flex: 1; margin-top: 40px; }
     .service-category { margin-bottom: 40px; }
-    .cat-title { font-size: 13px; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 20px; font-weight: 700; }
-    .service-item { display: flex; justify-content: space-between; align-items: center; padding: 20px; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 8px; margin-bottom: 12px; }
+    .cat-title { 
+      font-size: 13px; color: var(--text-muted); text-transform: uppercase; 
+      letter-spacing: 0.1em; border-bottom: 1px solid var(--glass-border); 
+      padding-bottom: 10px; margin-bottom: 20px; font-weight: 700;
+    }
+    .service-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px; background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: 8px; margin-bottom: 12px;
+    }
     .svc-name { font-weight: 700; font-size: 16px; color: white; }
     .svc-price { font-size: 18px; font-weight: 700; color: var(--accent); }
     .svc-right { display: flex; align-items: center; gap: 20px; }
+
+    footer { 
+      border-top: 1px solid var(--glass-border); 
+      padding: 60px 0; 
+      margin-top: 60px; 
+      text-align: center; 
+      color: var(--text-muted); 
+      font-size: 13px; 
+      background: #000;
+    }
   </style>
 </head>
 <body>
@@ -113,14 +158,27 @@
     </div>
   </header>
 
-  <main class="container" style="margin-top: 40px;">
+  <main class="container">
     <h2 style="font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 40px;">Service Price List</h2>
     <div id="servicesMount"></div>
   </main>
 
+  <footer>
+    <div class="container">
+      <p>© 2026 Net Studio Barbershop Engine.</p>
+    </div>
+  </footer>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script>
-    // --- 1. BOOTSTRAP SLUG ---
+    // --- 1. CONFIG & CLIENT ---
+    const SUPABASE_URL = "https://jdvdgvolfmvlgyfklbwe.supabase.co";
+    const SUPABASE_KEY = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek";
+    
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // --- 2. UTILS: SLUG & LINKS ---
     function nsGetSlug() {
       const p = new URLSearchParams(location.search);
       const b = p.get("b");
@@ -129,75 +187,91 @@
       return m ? decodeURIComponent(m[1]).toLowerCase() : "the-den";
     }
 
-    window.NS = {
-      SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
-      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", // Use real key
-      BUSINESS_SLUG: nsGetSlug()
-    };
-
-    const sb = supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
-
-    // --- 2. LOGIC ---
-    async function nsLoadBusiness() {
-      const { data, error } = await sb.from("business").select("id,name,logo_url").eq("slug", window.NS.BUSINESS_SLUG).maybeSingle();
-      if (data) {
-        window.BUSINESS_ID = data.id;
-        window.NS_BUSINESS = data;
-        document.body.dataset.businessId = data.id;
-      }
-      return data;
-    }
-
-    function nsApplyBranding() {
-      const b = window.NS_BUSINESS;
-      const brand = document.getElementById("brandLogo");
-      if (!brand || !b) return;
-      if (b.logo_url) {
-        brand.innerHTML = `<img src="${b.logo_url}" alt="${b.name}" />`;
-      } else {
-        brand.innerHTML = `<span>THE <i>DEN</i></span>`;
-      }
-    }
+    const currentSlug = nsGetSlug();
 
     function nsBindNavLinks() {
-      const slug = window.NS.BUSINESS_SLUG;
       document.querySelectorAll("a[data-page]").forEach(a => {
         const page = a.getAttribute("data-page");
         const u = new URL(page, location.origin);
-        if (slug) u.searchParams.set("b", slug);
+        u.searchParams.set("b", currentSlug);
         a.setAttribute("href", u.pathname + u.search);
       });
     }
 
-    async function loadServices() {
-      if (!window.BUSINESS_ID) return;
-      const { data } = await sb.from("menu_items").select("*").eq("business_id", window.BUSINESS_ID).eq("is_active", true);
-      const mount = document.getElementById("servicesMount");
-      if (!data || !mount) return;
+    // --- 3. DATA LOADING ---
+    async function nsInit() {
+      // Load Business & Branding
+      const { data: bData } = await sb.from("business").select("*").eq("slug", currentSlug).maybeSingle();
       
+      if (bData) {
+        window.BUSINESS_ID = bData.id;
+        document.body.dataset.businessId = bData.id;
+        
+        // Apply Logo
+        const brand = document.getElementById("brandLogo");
+        if (bData.logo_url) {
+          brand.innerHTML = `<img src="${bData.logo_url}" alt="${bData.name}">`;
+        } else {
+          brand.innerHTML = `<span>${bData.name.toUpperCase()}</span>`;
+        }
+      }
+
+      // Load Services
+      if (window.BUSINESS_ID) {
+        const { data: sData } = await sb.from("menu_items").select("*").eq("business_id", window.BUSINESS_ID).eq("is_active", true);
+        renderServices(sData || []);
+      }
+
+      nsBindNavLinks();
+      nsLoadBookingScript();
+    }
+
+    function renderServices(items) {
+      const mount = document.getElementById("servicesMount");
+      if (!mount) return;
       mount.innerHTML = "";
-      data.forEach(s => {
-        mount.innerHTML += `
-          <div class="service-item">
+
+      const groups = {};
+      items.forEach(i => {
+        const cat = i.category || "General";
+        (groups[cat] ||= []).push(i);
+      });
+
+      Object.entries(groups).forEach(([cat, svcs]) => {
+        const catBlock = document.createElement("div");
+        catBlock.className = "service-category";
+        catBlock.innerHTML = `<div class="cat-title">${cat}</div>`;
+        
+        svcs.forEach(s => {
+          const row = document.createElement("div");
+          row.className = "service-item";
+          row.innerHTML = `
             <div>
               <div class="svc-name">${s.name}</div>
-              <div style="font-size: 12px; color: var(--text-muted);">${s.description || ''}</div>
+              <div style="font-size:12px; color:var(--text-muted)">${s.description || ''}</div>
             </div>
             <div class="svc-right">
               <div class="svc-price">$${(s.price_cents/100).toFixed(2)}</div>
               <button class="btn" onclick="openBooking('${s.id}')">Book</button>
             </div>
-          </div>`;
+          `;
+          catBlock.appendChild(row);
+        });
+        mount.appendChild(catBlock);
       });
     }
 
-    // --- 3. INIT ---
-    (async () => {
-      await nsLoadBusiness();
-      nsApplyBranding();
-      nsBindNavLinks();
-      await loadServices();
-    })();
+    function nsLoadBookingScript() {
+      const s = document.createElement("script");
+      s.src = "/assets/js/netstudio_booking.js";
+      s.defer = true;
+      document.body.appendChild(s);
+    }
+
+    window.openBooking = window.openBooking || function(id) { console.log("Booking ID:", id); };
+
+    // --- 4. START ---
+    nsInit();
   </script>
 </body>
 </html>
