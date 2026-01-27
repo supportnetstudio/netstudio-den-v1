@@ -160,10 +160,10 @@
           <a href="tel:7575432966" class="btn" style="width:100%">
             Call The Shop
           </a>
-          <a href="sms:17575432966" class="btn btn-outline" style="width:100%">
+          <a href="sms:+17575432966" class="btn btn-outline" style="width:100%">
             Text Us
           </a>
-          <button class="btn btn-outline" onclick="openBooking();" style="width:100%">
+          <button type="button" class="btn btn-outline" onclick="openBooking(); return false;" style="width:100%">
             Book An Appointment
           </button>
           <p style="color:var(--text-muted); font-size:12px; text-align:center; margin-top:10px;">
@@ -183,7 +183,7 @@
             width="100%" 
             height="100%" 
             referrerpolicy="no-referrer-when-downgrade"
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3195.686262423773!2d-76.28974662369666!3d36.77815897225143!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89ba98661609805f%3A0x5e2365265445229c!2s3904%20Bainbridge%20Blvd%2C%20Chesapeake%2C%20VA%2023324!5e0!3m2!1sen!2sus!4v1706630000000!5m2!1sen!2sus">
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3195.404561021464!2d-76.28919632367566!3d36.78453486851628!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89ba980f7a0a0a0d%3A0x1234567890abcdef!2s3904%20Bainbridge%20Blvd%2C%20Chesapeake%2C%20VA%2023324!5e0!3m2!1sen!2sus!4v1700000000000!5m2!1sen!2sus">
           </iframe>
         </div>
 
@@ -220,49 +220,87 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    /* --- CONFIG + SLUG DETECTION --- */
+    function nsGetSlugFromHost() {
+      const qp = new URLSearchParams(location.search).get("b");
+      if (qp) return qp.toLowerCase();
+      const host = location.hostname.toLowerCase();
+      if (host.endsWith(".netstudio.app")) return host.split(".")[0];
+      return null;
+    }
+
     window.NS = window.NS || {
       SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-      BUSINESS_SLUG: "net-studio-barbershop"
+      BUSINESS_SLUG: nsGetSlugFromHost()
     };
 
-    // ✅ PATCH: Format Time Utility (14:00:00 -> 2:00 PM)
+    /* --- HELPERS --- */
     function formatTime(timeStr) {
       if (!timeStr) return "";
-      // handle "14:00:00" or "14:00"
-      const [h, m] = timeStr.split(":");
-      const hours = parseInt(h);
-      const suffix = hours >= 12 ? "PM" : "AM";
-      const displayHour = ((hours + 11) % 12 + 1);
+      const parts = String(timeStr).split(":");
+      const h = parseInt(parts[0] || "0", 10);
+      const m = (parts[1] || "00").padStart(2, "0");
+      const suffix = h >= 12 ? "PM" : "AM";
+      const displayHour = ((h + 11) % 12) + 1;
       return `${displayHour}:${m} ${suffix}`;
     }
 
-    // ✅ PATCH: Fetch and Render Hours
+    /* --- FETCH HOURS --- */
     async function loadBusinessHours(sb, businessId) {
+      const container = document.getElementById("hoursContainer");
+      if (!container) return;
+
       const { data, error } = await sb
         .from("business_hours")
-        .select("*")
+        .select("day_of_week,is_open,open_time,close_time")
         .eq("business_id", businessId)
         .order("day_of_week", { ascending: true });
 
-      if (error || !data?.length) {
-         // Fallback if empty
-         document.getElementById("hoursContainer").innerHTML = `<div style="color:rgba(255,255,255,0.4);">Hours not available</div>`;
-         return;
+      if (error) {
+        console.warn("business_hours error:", error);
+        container.innerHTML = `<div style="color:rgba(255,255,255,0.4);">Hours not available</div>`;
+        return;
       }
 
+      if (!data || !data.length) {
+        container.innerHTML = `<div style="color:rgba(255,255,255,0.4);">Hours not available</div>`;
+        return;
+      }
+
+      // If your table stores 1-7 (Mon-Sun), normalize to 0-6 (Sun-Sat)
+      const looksLikeOneToSeven = data.some(r => Number(r.day_of_week) === 7) || data.every(r => Number(r.day_of_week) >= 1);
+      const norm = (d) => {
+        const n = Number(d);
+        if (Number.isNaN(n)) return 0;
+        if (!looksLikeOneToSeven) return n; // already 0-6
+        return n % 7; // 7->0, 1->1, 2->2 ...
+      };
+
       const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-      const container = document.getElementById("hoursContainer");
       container.innerHTML = "";
 
-      data.forEach(row => {
-        const dayName = days[row.day_of_week];
+      // Sort carefully using normalized day index to ensure Sun->Sat order visually
+      // Or just trust the API order if standard. We'll iterate data directly but label correctly.
+      // Better approach: Create a map of normalized_day -> config, then loop 0..6
+      const map = {};
+      data.forEach(r => { map[norm(r.day_of_week)] = r; });
+
+      // Render 0 (Sunday) to 6 (Saturday) or however you prefer. 
+      // Most US businesses list Mon-Fri first, then Sat/Sun. Let's do Standard Week (Sun-Sat) or Mon-Sun.
+      // Let's stick to the data order but label correctly.
+      
+      // Re-sort data by normalized day to ensure Sunday(0) is first or mapped correctly
+      const sortedData = [...data].sort((a,b) => norm(a.day_of_week) - norm(b.day_of_week));
+
+      sortedData.forEach(row => {
+        const dayIndex = norm(row.day_of_week);
+        const dayName = days[dayIndex] || "";
         const isClosed = !row.is_open;
-        
-        // Clean up time display
+
         const openDisplay = formatTime(row.open_time);
         const closeDisplay = formatTime(row.close_time);
-        
+
         const timeHTML = isClosed
           ? `<span style="color:var(--accent); font-weight:700;">Closed</span>`
           : `<span>${openDisplay} - ${closeDisplay}</span>`;
@@ -278,8 +316,14 @@
       });
     }
 
+    /* --- INIT --- */
     (async () => {
       try {
+        if (!window.NS.BUSINESS_SLUG) {
+           console.warn("No business slug found.");
+           return;
+        }
+
         const sb = supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
         const { data, error } = await sb
           .from("business")
@@ -292,7 +336,7 @@
         document.getElementById("nsdBusiness")?.setAttribute("data-business-id", data.id);
         document.body.dataset.businessId = data.id;
 
-        // ✅ PATCH: Trigger Hours Load
+        // Load Hours
         await loadBusinessHours(sb, data.id);
 
       } catch (e) {
