@@ -228,16 +228,17 @@
       }
 
       members.forEach(m => {
+        const id   = String(m.id || "").trim();
         const name = (m.name || "Barber");
         const role = (m.role || "Barber");
         const bio  = (m.bio || "Professional barber at The Den.");
 
-        // ✅ profile image priority:
+        // ✅ image priority:
         // 1) gallery_image (is_profile=true)
-        // 2) team_members.photo_url (if you use it)
+        // 2) team_members.photo_url
         // 3) fallback
         const img =
-          profileMap.get(m.id) ||
+          (id && profileMap.get(id)) ||
           m.photo_url ||
           "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&q=80&w=600";
 
@@ -250,7 +251,7 @@
               <div class="barber-name">${name}</div>
               <span class="barber-role">${role}</span>
               <p class="specialties">${bio}</p>
-              <button class="btn" onclick="openBookingWithStaff('${m.id}')" style="width:100%;">
+              <button class="btn" onclick="openBookingWithStaff('${id}')" style="width:100%;">
                 Book ${name}
               </button>
             </div>
@@ -263,33 +264,33 @@
       if (!BUSINESS_SLUG) return;
 
       // 1) business id
-      const { data: biz } = await sb
+      const { data: biz, error: bErr } = await sb
         .schema("public")
         .from("business")
         .select("id")
         .eq("slug", BUSINESS_SLUG)
         .maybeSingle();
 
-      if (!biz?.id) return;
+      if (bErr || !biz?.id) return;
 
-      // 2) only REAL barbers (auth-linked)
+      // 2) ONLY auth-linked members
       const { data: members, error: mErr } = await sb
         .schema("public")
         .from("team_members")
         .select("id, name, role, bio, photo_url, auth_user_id, created_at")
         .eq("business_id", biz.id)
-        .not("auth_user_id", "is", null)   // ✅ this is your auth link
+        .not("auth_user_id", "is", null)      // ✅ ONLY real users
         .order("created_at", { ascending: true });
 
       if (mErr) {
-        console.warn("loadCrew members error:", mErr);
+        console.warn("team_members error:", mErr);
         return;
       }
 
       const list = members || [];
-      const ids = list.map(x => x.id).filter(Boolean);
+      const ids = list.map(x => String(x.id || "").trim()).filter(Boolean);
 
-      // 3) profile images from gallery_image (is_profile = true)
+      // 3) Pull profile images from gallery_image (is_profile = true)
       const profileMap = new Map();
 
       if (ids.length) {
@@ -303,9 +304,9 @@
           .order("created_at", { ascending: false });
 
         if (pErr) {
-          console.warn("loadCrew profile pics error:", pErr);
+          console.warn("gallery_image profile error:", pErr);
         } else {
-          // keep newest per team_member_id
+          // newest per team_member_id wins
           (pics || []).forEach(r => {
             const tm = String(r.team_member_id || "").trim();
             if (!tm) return;
