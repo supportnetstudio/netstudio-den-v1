@@ -172,7 +172,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /* ---------- SLUG / NAV REWRITE (same pattern as About) ---------- */
+    /* ---------- SLUG / NAV REWRITE ---------- */
     function nsGetSlugFromHost() {
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return qp.toLowerCase();
@@ -226,27 +226,62 @@
       return String(x || "").trim();
     }
 
+    // ✅ ROBUST TEAM PARSING
+    function parseTeamArray(teamJson){
+      // team_json might be: array, stringified array, or object like {team:[...]} / {members:[...]}
+      let t = teamJson;
+      try { if (typeof t === "string") t = JSON.parse(t); } catch(e){ /* ignore */ }
+
+      if (Array.isArray(t)) return t;
+      if (t && typeof t === "object") {
+        if (Array.isArray(t.team)) return t.team;
+        if (Array.isArray(t.members)) return t.members;
+        if (Array.isArray(t.team_members)) return t.team_members;
+      }
+      return [];
+    }
+
     function buildTeamMap(teamJson){
-      // team_json expected to be array of members
-      const arr = Array.isArray(teamJson) ? teamJson : [];
+      const arr = parseTeamArray(teamJson);
       const map = new Map();
+      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+      const getName = (m) => pick(m?.display_name, m?.name, m?.full_name, m?.title, m?.label, m?.username, m?.email, "");
+
       arr.forEach(m => {
-        const id = normalizeId(m?.id || m?.team_member_id || m?.uuid || "");
-        const name = pick(m?.name_toggle, m?.display_name, m?.name, m?.full_name, "");
-        if (id) map.set(id, name || id);
+        const name = getName(m);
+        if (!name) return;
+
+        // 1) common id fields
+        const directIds = [m?.id, m?.uuid, m?.user_id, m?.auth_user_id, m?.team_member_id, m?.member_id, m?.profile_id].map(normalizeId).filter(Boolean);
+        directIds.forEach(id => map.set(id, name));
+
+        // 2) scan ANY uuid-looking value inside this object to the same name
+        Object.values(m || {}).forEach(v => {
+          if (typeof v === "string" && uuidRe.test(v.trim())) {
+            map.set(v.trim(), name);
+          }
+        });
       });
       return map;
     }
 
+    // ✅ LOGIC: Shop vs Member vs Fallback
     function overlayForRow(row, teamMap){
       const tmId = normalizeId(row?.team_member_id);
-      const tmName = tmId ? teamMap.get(tmId) : "";
+
+      // shop-owned photo rule (explicit type OR no ID)
+      if (!tmId || String(row?.type || "").toLowerCase() === "shop") {
+        return "Shop Photo";
+      }
+
+      const tmName = teamMap.get(tmId);
+
+      // team member photo rule
       if (tmName) return `Cut by ${tmName}`;
 
-      const cap = pick(row?.caption, "");
-      if (cap) return cap;
-
-      return "Shop Photo";
+      // fallback (id exists but name not found)
+      return "Team Photo";
     }
 
     function renderGallery(rows, teamMap){
@@ -256,7 +291,6 @@
 
       const list = Array.isArray(rows) ? rows : [];
 
-      // If empty, you can show nothing (clean) OR show placeholders. Keeping it clean:
       if (list.length === 0) {
         grid.innerHTML = `<div style="color:rgba(255,255,255,.65); text-align:center; grid-column:1/-1; padding: 40px 0;">
           No gallery images yet.
@@ -283,7 +317,6 @@
       const c = contentJson || {};
       const g = c.gallery || {};
 
-      // defaults match your hardcoded ones
       const kicker  = pick(g.kicker, "Our Work");
       const heading = pick(g.heading, "Fresh Cuts & Fades");
       const text    = pick(g.text, "Real clients. Real results. No filters. Hover over an image to see the detail.");
@@ -301,15 +334,13 @@
       nsWireHeaderNav();
 
       if (!NS.BUSINESS_SLUG) {
-        // no slug = nothing to load; leave defaults
         if (window.lucide) lucide.createIcons();
         return;
       }
 
       // 1) get business (need id + team_json)
-      // ✅ PATCH: Force schema public to fix 404
       const { data: biz, error: bErr } = await sb
-        .schema("public") // Force public schema
+        .schema("public") 
         .from("business")
         .select("id, team_json")
         .eq("slug", NS.BUSINESS_SLUG)
@@ -323,9 +354,8 @@
       const teamMap = buildTeamMap(biz.team_json);
 
       // 2) get site content_json for gallery headings
-      // ✅ PATCH: Force schema public
       const { data: site } = await sb
-        .schema("public") // Force public schema
+        .schema("public")
         .from("business_sites")
         .select("content_json")
         .eq("business_id", biz.id)
@@ -335,10 +365,9 @@
       applyGalleryContent(site?.content_json || {});
 
       // 3) get gallery rows
-      // ✅ PATCH: Correct table name (gallery_image) & force schema
       const { data: rows } = await sb
         .schema("public")
-        .from("gallery_image") // Correct singular name
+        .from("gallery_image")
         .select("id, image_url, team_member_id, caption, type, is_profile, created_at")
         .eq("business_id", biz.id)
         .order("created_at", { ascending: false });
