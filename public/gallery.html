@@ -2,210 +2,518 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>The Den — Gallery</title>
+  <title>Net Studio — Website Builder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <script src="https://unpkg.com/lucide@latest"></script>
-  <style>
-    /* --- CORE VARIABLES --- */
-    :root {
-      --bg-dark: #050507;
-      --bg-gradient: radial-gradient(circle at top, #1b1b22 0%, #000 100%);
-      --text-main: #ffffff;
-      --text-muted: rgba(255, 255, 255, 0.7);
-      --accent: #ef4444; 
-      --glass: rgba(255, 255, 255, 0.05);
-      --glass-border: rgba(255, 255, 255, 0.1);
-      --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-    }
 
-    /* --- RESET & SCROLL GUARD --- */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    html, body { width:100%; max-width:100%; overflow-x:hidden; }
-    img, iframe { max-width:100%; height:auto; display:block; }
+  <style>
+    /* --- RESET & VARS --- */
+    *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+    :root{
+      --bg0:#050507; --bg2:#1b1b22;
+      --text:#fff; --muted:rgba(255,255,255,.6); --dim:rgba(255,255,255,.55);
+      --line:rgba(255,255,255,.12); --line2:rgba(255,255,255,.08);
+      --header-bg:rgba(0,0,0,.55);
+      --pill-bg:rgba(255,255,255,.05); --pill-line:rgba(255,255,255,.1);
+      --panel:rgba(255,255,255,.04);
+      --panel2:rgba(255,255,255,.07);
+      --shadow:0 18px 42px rgba(0,0,0,.65);
+      --ok:#22c55e; --warn:#eab308; --bad:#ef4444; --blue:#3b82f6; --gray:#6b7280;
+    }
 
     body {
-      background: var(--bg-gradient);
-      color: var(--text-main);
-      font-family: var(--font-body);
-      line-height: 1.6;
-      padding-top: 80px;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at top, var(--bg2) 0, var(--bg0) 55%, #000 100%);
+      color: var(--text);
+      min-height: 100vh;
     }
 
-    /* --- UTILITIES --- */
-    .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
-    
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--accent); color: white;
-      padding: 10px 20px; border-radius: 99px;
-      font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-      text-decoration: none; font-size: 11px; border: none; cursor: pointer;
-      transition: 0.2s;
-    }
-    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-    
-    .section-title {
-      font-size: 12px; color: var(--accent); letter-spacing: 0.2em;
-      text-transform: uppercase; font-weight: 800; margin-bottom: 10px; display: block;
-      text-align: center;
-    }
-    h2 { font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 40px; }
+    /* --- HARD-SCOPE OVERRIDES --- */
+    body[data-page='builder'] { display: block !important; }
+    body[data-page='builder'] .nsd-header { display: flex !important; position: sticky !important; top: 0; }
 
     /* --- HEADER --- */
-    header {
-      position: fixed; top: 0; width: 100%; z-index: 100;
-      background: rgba(0,0,0,0.8); backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--glass-border);
+    .nsd-header {
+      width: 100%; padding: 14px 16px;
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      z-index: 100; justify-content: space-between; align-items: center;
     }
-    .nav-wrap {
-      display: flex; justify-content: space-between; align-items: center; height: 70px;
-    }
-    
-    /* Updated Logo Styling */
-    .logo { 
-      font-weight: 900; 
-      font-size: 20px; 
-      text-transform: uppercase; 
-      letter-spacing: 0.1em; 
-      font-style: italic;
-      text-decoration: none;
-      color: var(--text-main);
-    }
-    .logo span { color: var(--accent); }
-    
-    .nav-links { display: flex; gap: 24px; }
-    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; text-transform: uppercase; }
-    .nav-links a:hover, .nav-links a.active { color: white; }
+    .nsd-title { font-size: 13px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; opacity: .92; }
+    .publish-status { font-size: 11px; font-weight: 700; color: var(--ok); display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .05em; }
 
-    /* --- GALLERY GRID --- */
-    .den-gallery {
-      display: grid; 
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
-      gap: 20px;
-      padding-bottom: 40px;
+    /* --- PILLS --- */
+    .qa-sticky { position: relative; z-index: 40; padding: 16px; background: transparent; }
+    .qa-bar { display: flex; gap: 10px; width: 100%; max-width: 1100px; margin: 0 auto; flex-wrap: wrap; }
+    .qa-pill {
+      padding: 8px 14px; border-radius: 999px;
+      font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+      background: var(--pill-bg); border: 1px solid var(--pill-line);
+      color: var(--text); text-decoration: none; white-space: nowrap;
     }
-    .den-photo {
-      height: 350px; 
-      background-size: cover; 
-      background-position: center;
-      border-radius: 4px;
-      filter: grayscale(100%) contrast(1.1);
-      transition: 0.4s ease;
-      position: relative;
-      cursor: pointer;
-      border: 1px solid var(--glass-border);
-      overflow: hidden;
+    .qa-pill.active { background: var(--text); color: var(--bg0); font-weight: 700; border-color: var(--text); }
+
+    /* --- MAIN & CARDS --- */
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 80px; }
+    .page-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .page-title { font-size: 22px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    .subtitle { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    .card {
+      border-radius: 18px;
+      background: radial-gradient(circle at top, var(--panel2) 0, var(--panel) 55%, rgba(0,0,0,0) 100%);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      padding: 24px; margin-bottom: 24px;
     }
-    .den-photo:hover {
-      filter: grayscale(0%) contrast(1);
-      transform: scale(1.02);
-      z-index: 2;
-      border-color: var(--accent);
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .card-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .15em; opacity: .7; }
+
+    /* --- BUTTONS & INPUTS --- */
+    .btn {
+      padding: 0 16px; height: 36px; border-radius: 10px; font-weight: 700; font-size: 11px; 
+      text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; display: flex; align-items: center;
+      border: 1px solid var(--pill-line); background: var(--text); color: var(--bg0);
     }
+    .btn-outline { background: transparent; color: var(--text); border-color: var(--line); }
+    .primary-btn {
+      background: var(--text); color: var(--bg0); padding: 10px 24px; border-radius: 99px; 
+      font-weight: 800; font-size: 12px; text-transform: uppercase; border: none; cursor: pointer; 
+      display: flex; align-items: center; gap: 8px;
+    }
+    .input {
+      flex: 1; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+      background: rgba(0,0,0,0.3); color: var(--text); font-size: 13px; outline: none; font-family: monospace;
+    }
+    .input-group { display: flex; gap: 8px; margin-top: 10px; }
+
+    /* --- ROWS & SWITCHES --- */
+    .page-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line2); }
+    .page-left { display: flex; align-items: center; gap: 14px; cursor: pointer; flex: 1; }
+    .page-name { font-size: 13px; font-weight: 600; }
+    .page-slug { font-size: 11px; color: var(--muted); font-family: monospace; }
     
-    /* Hover Overlay Tag */
-    .photo-tag {
-      position: absolute; bottom: 10px; left: 10px;
-      background: var(--accent); color: white;
-      font-size: 10px; font-weight: 700; 
-      padding: 6px 12px; text-transform: uppercase;
-      opacity: 0; transform: translateY(10px); transition: 0.3s;
-      border-radius: 4px;
+    .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; inset: 0; background-color: var(--line); transition: .4s; border-radius: 20px; }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: var(--muted); transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: var(--ok); }
+    input:checked + .slider:before { transform: translateX(14px); background-color: #fff; }
+
+    /* Modal styles */
+    .ns-modal{ position:fixed; inset:0; z-index:5000; display:none; }
+    .ns-modal.is-open{ display:block; }
+    .ns-modal__backdrop{ position:absolute; inset:0; background:rgba(0,0,0,.62); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .ns-modal__panel{
+      position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+      width:min(560px, calc(100vw - 24px)); border-radius:18px;
+      background: radial-gradient(circle at top, var(--panel2) 0, var(--panel) 55%, rgba(0,0,0,0) 100%);
+      border:1px solid var(--line); box-shadow: 0 30px 80px rgba(0,0,0,.75); overflow:hidden;
     }
-    .den-photo:hover .photo-tag { opacity: 1; transform: translateY(0); }
+    .ns-modal__head{ display:flex; justify-content:space-between; align-items:center; padding:16px; border-bottom:1px solid var(--line2); background: rgba(0,0,0,.18); }
+    .ns-modal__kicker{ font-size:10px; font-weight:800; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); }
+    .ns-modal__title{ font-size:14px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; margin-top:2px; }
+    .ns-iconbtn{ height:36px; width:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.06); border:1px solid var(--line2); color:var(--text); cursor:pointer; }
+    .ns-modal__body{ padding:16px; display:flex; flex-direction:column; gap:14px; max-height: 70vh; overflow-y: auto; }
+    .ns-modal__foot{ display:flex; justify-content:flex-end; gap:10px; padding:14px 16px; border-top:1px solid var(--line2); background: rgba(0,0,0,.18); }
+    .ns-field{ display:flex; flex-direction:column; gap:8px; }
+    .ns-label{ font-size:10px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+    .ns-help{ font-size:12px; color:var(--muted); line-height:1.35; }
+    .ns-input{ width:100%; padding:12px; border-radius:12px; border:1px solid var(--line); background: rgba(0,0,0,0.35); color: var(--text); font-size: 13px; outline:none; font-family: ui-monospace, monospace; }
+    textarea.ns-input { resize: vertical; min-height: 120px; }
+    .ns-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
 
-    /* --- FOOTER --- */
-    footer { border-top: 1px solid var(--glass-border); padding: 60px 0; margin-top: 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+    /* Gallery Row Styles */
+    .gallery-row { display: grid; grid-template-columns: 2fr 1.5fr 0.5fr 36px; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .gallery-items-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--line2); padding-bottom: 8px; }
 
-    /* --- MOBILE OPTIMIZATION --- */
-    @media (max-width: 768px){
-      .nav-links { display:none; }
-      .photo-tag { opacity:1; transform:none; }
-      .den-photo { filter: grayscale(0%) contrast(1); }
-      .den-photo:hover { 
-        transform: none;
-        border-color: var(--glass-border);
-        box-shadow: none;
-      }
+    #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 30px; z-index: 6000; background: #fff; color: #000; padding: 12px 24px; border-radius: 99px; font-size: 12px; font-weight: 600; display: none; }
+
+    @media (max-width: 520px){
+      .ns-modal__panel{ width: calc(100vw - 16px); }
+      .gallery-row { grid-template-columns: 1fr 36px; gap: 8px; }
+      .gallery-row input:nth-child(2), .gallery-row input:nth-child(3) { display: none; } /* Hide tag/order on mobile for space */
     }
   </style>
 </head>
-<body>
 
-  <header>
-    <div class="container nav-wrap">
-      <a href="index.html#home" class="logo" id="header_logo">THE <span>DEN</span></a>
-
-      <nav class="nav-links">
-        <a href="index.html">Home</a>
-        <a href="about.html">About</a>
-        <a href="services.html">Services</a>
-        <a href="gallery.html" class="active">Gallery</a>
-      </nav>
-
-      <a href="#book" class="btn" style="padding: 8px 16px; font-size: 11px;" onclick="openBooking()">Book Now</a>
+<body data-page="builder">
+  
+  <header class="nsd-header">
+    <div class="nsd-title">NET STUDIO — WEBSITES</div>
+    <div class="publish-status">
+      <i data-lucide="check-circle" style="width:14px"></i>
+      <span>Published</span>
     </div>
   </header>
 
-  <main class="container" style="margin-top: 40px;">
-    
-    <span class="section-title">Our Work</span>
-    <h2>Fresh Cuts & Fades</h2>
-    <p style="text-align:center; color:var(--text-muted); max-width:500px; margin:0 auto 60px;">
-      Real clients. Real results. No filters. Hover over an image to see the detail.
-    </p>
+  <div class="qa-sticky">
+    <div class="qa-bar">
+      <a href="/dashboard" class="qa-pill">Dashboard</a>
+      <a href="/websites" class="qa-pill active">Websites</a>
+      <a href="/bookings" class="qa-pill">Bookings</a>
+      <a href="/settings" class="qa-pill">Settings</a>
+    </div>
+  </div>
 
-    <div class="den-gallery">
-      <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&q=80&w=800');">
-        <div class="photo-tag">Cut by JerzeeCutz</div>
+  <main>
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Website Builder</h1>
+        <p class="subtitle">Manage content, template, and design.</p>
       </div>
-      <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&q=80&w=800');">
-        <div class="photo-tag">Cut by K</div>
-      </div>
-      <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1605497788044-5a32c7078486?auto=format&fit=crop&q=80&w=800');">
-        <div class="photo-tag">Cut by Mink</div>
-      </div>
-      <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1503951914875-befbb711ed3e?auto=format&fit=crop&q=80&w=800');">
-        <div class="photo-tag">Cut by JerzeeCutz</div>
-      </div>
-      <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1534304332490-e222d0d4b0ab?auto=format&fit=crop&q=80&w=800');">
-        <div class="photo-tag">Cut by K</div>
-      </div>
-      <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1593431614273-518b76dfb37c?auto=format&fit=crop&q=80&w=800');">
-        <div class="photo-tag">Cut by Mink</div>
-      </div>
-       <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80&w=800');">
-        <div class="photo-tag">Shop Vibe</div>
-      </div>
-       <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&q=80&w=800');">
-        <div class="photo-tag">Line Up</div>
-      </div>
-       <div class="den-photo" style="background-image: url('https://images.unsplash.com/photo-1517832606299-7ae9b720a186?auto=format&fit=crop&q=80&w=800');">
-        <div class="photo-tag">Texture</div>
-      </div>
+      <button class="primary-btn" id="publishBtn" onclick="triggerBuild()">
+        <i data-lucide="upload-cloud" style="width:16px"></i> Publish
+      </button>
     </div>
 
+    <section class="card">
+      <div class="card-head"><span class="card-title">Pages & Routing</span></div>
+      <div id="pages_container"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><span class="card-title">Domain Connection</span></div>
+      <div style="margin-bottom: 24px;">
+        <span style="font-size:10px; text-transform:uppercase; color:var(--muted); font-weight:700;">Primary Domain</span>
+        <div class="input-group">
+          <input type="text" class="input" readonly id="defaultDomainInput" />
+          <button class="btn btn-outline" onclick="copyText('defaultDomainInput')">Copy</button>
+          <button class="btn" onclick="visitDefault()">Visit</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="padding:0; border:none; background:none; box-shadow:none;">
+      <div class="card-head" style="padding:0 4px;"><span class="card-title">Live Preview</span><a href="#" target="_blank" id="previewTabBtn" class="qa-pill" style="border:none; background:none; color:var(--blue); font-size:10px;">Open New Tab</a></div>
+      <div class="preview-box" id="previewScreen" style="background-image: url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000');">
+        <button class="visual-edit-btn" onclick="toast('🎨 Opening Visual Editor...')">Open Visual Editor</button>
+      </div>
+    </section>
   </main>
 
-  <footer>
-    <div class="container">
-      <div style="font-weight:900; font-size:24px; margin-bottom:20px; text-transform:uppercase; font-style:italic;">THE <span style="color:var(--accent)">DEN</span></div>
-      <p>© 2026 The Den Barbershop. Powered by Net Studio.</p>
+  <div id="homeContentModal" class="ns-modal" aria-hidden="true">
+    <div class="ns-modal__backdrop" onclick="closeHomeContent()"></div>
+    <div class="ns-modal__panel" role="dialog" aria-modal="true">
+      <div class="ns-modal__head">
+        <div><div class="ns-modal__kicker">HOME CONTENT</div><div id="homeContentTitle" class="ns-modal__title">Edit Home Page</div></div>
+        <button class="ns-iconbtn" type="button" onclick="closeHomeContent()"><i data-lucide="x" style="width:18px"></i></button>
+      </div>
+      <div class="ns-modal__body">
+        <div class="ns-field"><label class="ns-label">Hero Title</label><input class="ns-input" id="home_hero_title" /></div>
+        <div class="ns-field"><label class="ns-label">Hero Subtitle</label><input class="ns-input" id="home_hero_subtitle" /></div>
+        <div class="ns-field"><label class="ns-label">Primary Button Text</label><input class="ns-input" id="home_primary_cta_text" /><div class="ns-help">Button opens Net Studio booking modal.</div></div>
+        <div class="ns-field"><label class="ns-label">Established Year</label><input class="ns-input" id="home_established_year" /></div>
+        <div class="ns-field"><label class="ns-label">About Heading</label><input class="ns-input" id="home_about_heading" /><div class="ns-help">Example: “A Back Home Kinda Thang”</div></div>
+        <div class="ns-field"><label class="ns-label">About Us</label><textarea class="ns-input" id="home_about_text" rows="5" style="resize:vertical;"></textarea></div>
+        <div class="ns-field"><label class="ns-label">Phone</label><input class="ns-input" id="home_phone" /></div>
+        <div class="ns-field"><label class="ns-label">Address</label><input class="ns-input" id="home_address" /></div>
+      </div>
+      <div class="ns-modal__foot"><button class="btn btn-outline" type="button" onclick="closeHomeContent()">Cancel</button><button class="btn" type="button" id="saveHomeBtn" onclick="saveHomeContent()">Save Home</button></div>
     </div>
-  </footer>
+  </div>
 
+  <div id="aboutContentModal" class="ns-modal" aria-hidden="true">
+    <div class="ns-modal__backdrop" onclick="closeAboutContent()"></div>
+    <div class="ns-modal__panel" role="dialog" aria-modal="true">
+      <div class="ns-modal__head">
+        <div><div class="ns-modal__kicker">ABOUT CONTENT</div><div class="ns-modal__title">Edit About Page</div></div>
+        <button class="ns-iconbtn" type="button" onclick="closeAboutContent()"><i data-lucide="x" style="width:18px"></i></button>
+      </div>
+      <div class="ns-modal__body">
+        <div class="ns-field"><label class="ns-label">Kicker</label><input class="ns-input" id="about_kicker_in" /></div>
+        <div class="ns-field"><label class="ns-label">Heading</label><input class="ns-input" id="about_heading_in" /></div>
+        <div class="ns-field"><label class="ns-label">Hero Text</label><textarea class="ns-input" id="about_text_in" rows="4"></textarea></div>
+        <div class="ns-field"><label class="ns-label">Image URL</label><input class="ns-input" id="about_image_1_in" /></div>
+        <div class="ns-field"><label class="ns-label">Neighborhood Section Title</label><input class="ns-input" id="about_story_title_in" /></div>
+        <div class="ns-field"><label class="ns-label">Neighborhood Paragraph 1</label><textarea class="ns-input" id="about_story_p1_in" rows="4"></textarea></div>
+        <div class="ns-field"><label class="ns-label">Neighborhood Paragraph 2</label><textarea class="ns-input" id="about_story_p2_in" rows="4"></textarea></div>
+      </div>
+      <div class="ns-modal__foot"><button class="btn btn-outline" type="button" onclick="closeAboutContent()">Cancel</button><button class="btn" type="button" onclick="saveAboutContent()">Save About</button></div>
+    </div>
+  </div>
+
+  <div id="galleryContentModal" class="ns-modal" aria-hidden="true">
+    <div class="ns-modal__backdrop" onclick="closeGalleryContent()"></div>
+    <div class="ns-modal__panel" role="dialog" aria-modal="true">
+      <div class="ns-modal__head">
+        <div><div class="ns-modal__kicker">GALLERY CONTENT</div><div class="ns-modal__title">Edit Gallery Page</div></div>
+        <button class="ns-iconbtn" type="button" onclick="closeGalleryContent()"><i data-lucide="x" style="width:18px"></i></button>
+      </div>
+      <div class="ns-modal__body">
+        <div class="ns-field"><label class="ns-label">Section Title</label><input class="ns-input" id="gallery_kicker" placeholder="Our Work" /></div>
+        <div class="ns-field"><label class="ns-label">Heading</label><input class="ns-input" id="gallery_heading" placeholder="Fresh Cuts & Fades" /></div>
+        <div class="ns-field"><label class="ns-label">Description</label><textarea class="ns-input" id="gallery_text" placeholder="Real clients. Real results..."></textarea></div>
+        
+        <hr style="border:0; border-top:1px solid var(--line2); margin: 8px 0;" />
+        
+        <div class="gallery-items-header">
+          <strong>Images</strong>
+          <button class="btn btn-outline" style="height:24px; font-size:10px; padding:0 8px;" onclick="addGalleryItem()">+ Add</button>
+        </div>
+        <div id="gallery_items_list"></div>
+      </div>
+      <div class="ns-modal__foot"><button class="btn btn-outline" type="button" onclick="closeGalleryContent()">Cancel</button><button class="btn" type="button" onclick="saveGalleryContent()">Save Gallery</button></div>
+    </div>
+  </div>
+
+  <div id="editModal" class="ns-modal" aria-hidden="true">
+    <div class="ns-modal__backdrop" onclick="closeEditModal()"></div>
+    <div class="ns-modal__panel" role="dialog" aria-modal="true">
+      <div class="ns-modal__head">
+        <div><div class="ns-modal__kicker">EDIT</div><div id="editModalTitle" class="ns-modal__title">Page</div></div>
+        <button class="ns-iconbtn" type="button" onclick="closeEditModal()"><i data-lucide="x" style="width:18px"></i></button>
+      </div>
+      <div class="ns-modal__body">
+        <input type="hidden" id="editKey" /><input type="hidden" id="editIndex" />
+        <div class="ns-field"><label class="ns-label">Page Name</label><input class="ns-input" id="editName" /></div>
+        <div class="ns-field"><label class="ns-label">Path</label><input class="ns-input" id="editPath" /><div class="ns-help">Must start with <b>/</b>.</div></div>
+        <div class="ns-field ns-row"><div><div class="ns-label">Enabled</div><div class="ns-help">Show in navigation.</div></div><label class="switch"><input type="checkbox" id="editEnabled"><span class="slider"></span></label></div>
+      </div>
+      <div class="ns-modal__foot"><button class="btn btn-outline" type="button" onclick="closeEditModal()">Cancel</button><button class="btn" type="button" id="saveEditBtn" onclick="savePageEdit()">Save</button></div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    lucide.createIcons();
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.style.display = 'block';
+      setTimeout(() => t.style.display = 'none', 3000);
+    }
+    function copyText(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      navigator.clipboard.writeText(el.value || "").then(() => toast("Copied!"));
+    }
 
-    /* 3) Safe Booking Stubs */
-    window.openBooking = window.openBooking || function () { console.log("Trigger Booking"); };
-    window.closeBooking = window.closeBooking || function () {};
+    function nl2br(s){ return String(s || "").trim().replace(/\n/g, "<br>"); }
+    function br2nl(s){ return String(s || "").replace(/<br\s*\/?>/gi, "\n").trim(); }
+
+    /* --- CONTENT READERS --- */
+    function getHomeContentView(content){
+      const c = content || {};
+      const home = c.home || {};
+      const hero = home.hero || {};
+      const cta = home.primary_cta || {};
+      return {
+        hero_title: hero.title || c.hero_title || "",
+        hero_subtitle: hero.subtitle || c.hero_sub || "",
+        cta_text: cta.text || c.hero_cta_text || "",
+        phone: home.phone || c.phone || "",
+        address: home.address || br2nl(c.address_html || ""),
+        established_year: home.established_year || c.hero_kicker || "",
+        about_heading: home.about?.heading || c.about_heading || "",
+        about_text: home.about?.text || c.about_text || ""
+      };
+    }
+
+    function getAboutContentView(content){
+      const c = content || {};
+      const aboutN = c.about || {};
+      const storyN = aboutN.story || {};
+      const pick = (...vals) => {
+        for (const v of vals) { if (v !== undefined && v !== null && String(v).trim() !== "") return String(v); }
+        return "";
+      };
+      return {
+        kicker: pick(aboutN.kicker, c.about_kicker, "Our Story"),
+        heading: pick(aboutN.heading, c.about_heading, "A Tradition of Excellence"),
+        text: pick(aboutN.text, c.about_text, c.about, ""),
+        image_1: pick(aboutN.image_1, c.about_image_1, c.about_img_1, ""),
+        story_title: pick(storyN.title, c.about_story_title, aboutN.story_title, "The Neighborhood Spot"),
+        story_p1: pick(storyN.p1, c.about_story_p1, c.about_story_text, ""),
+        story_p2: pick(storyN.p2, c.about_story_p2, c.about_story_footer, "")
+      };
+    }
+
+    /* --- CONTENT WRITERS --- */
+    function upsertHomeContent(content, view){
+      const next = { ...content };
+      next.home = {
+        ...(next.home || {}),
+        hero: { title: view.hero_title, subtitle: view.hero_subtitle },
+        primary_cta: { text: view.cta_text, href: "#booking" },
+        phone: view.phone, address: view.address, established_year: view.established_year,
+        about: { ...(next.home?.about || {}), heading: view.about_heading, text: view.about_text },
+        updated_at: new Date().toISOString()
+      };
+      // flat mirrors
+      next.hero_title = view.hero_title; next.hero_sub = view.hero_subtitle; next.hero_cta_text = view.cta_text;
+      next.phone = view.phone; next.address_html = nl2br(view.address); next.hero_kicker = view.established_year;
+      next.about_heading = view.about_heading; next.about_text = view.about_text;
+      return next;
+    }
+
+    function upsertAboutContent(content, view){
+      const next = { ...content };
+      next.about = {
+        ...(next.about || {}),
+        kicker: view.kicker, heading: view.heading, text: view.text, image_1: view.image_1,
+        story: { title: view.story_title, p1: view.story_p1, p2: view.story_p2 },
+        updated_at: new Date().toISOString()
+      };
+      // flat mirrors
+      next.about_kicker = view.kicker; next.about_heading = view.heading; next.about_text = view.text;
+      next.about_image_1 = view.image_1; next.about_story_title = view.story_title;
+      next.about_story_p1 = view.story_p1; next.about_story_p2 = view.story_p2;
+      return next;
+    }
+
+    /* --- GALLERY LOGIC --- */
+    async function loadGalleryModal(businessId) {
+      const { data: rows } = await sb.from("gallery_images").select("*").eq("business_id", businessId).order("sort_order");
+      const list = document.getElementById("gallery_items_list");
+      list.innerHTML = "";
+      rows?.forEach(r => {
+        list.insertAdjacentHTML("beforeend", `
+          <div class="gallery-row" data-id="${r.id}">
+            <input class="ns-input gi-url" value="${r.image_url || ""}" placeholder="Image URL" />
+            <input class="ns-input gi-tag" value="${r.tag || ""}" placeholder="Tag" />
+            <input class="ns-input gi-order" type="number" value="${r.sort_order || 0}" />
+            <button class="ns-iconbtn" onclick="this.closest('.gallery-row').remove()" style="width:24px; height:24px;"><i data-lucide="trash-2" style="width:14px"></i></button>
+          </div>
+        `);
+      });
+      lucide.createIcons();
+    }
+
+    window.addGalleryItem = function() {
+      document.getElementById("gallery_items_list").insertAdjacentHTML("beforeend", `
+        <div class="gallery-row" data-id="new">
+          <input class="ns-input gi-url" placeholder="Image URL" />
+          <input class="ns-input gi-tag" placeholder="Tag" />
+          <input class="ns-input gi-order" type="number" value="0" />
+          <button class="ns-iconbtn" onclick="this.closest('.gallery-row').remove()" style="width:24px; height:24px;"><i data-lucide="trash-2" style="width:14px"></i></button>
+        </div>
+      `);
+      lucide.createIcons();
+    };
+
+    window.openGalleryContent = async function(){
+      if (!window.SITE) return;
+      const c = window.SITE.content_json?.gallery || {};
+      document.getElementById("gallery_kicker").value = c.kicker || "Our Work";
+      document.getElementById("gallery_heading").value = c.heading || "Fresh Cuts & Fades";
+      document.getElementById("gallery_text").value = c.text || "";
+      
+      await loadGalleryModal(window.BIZ.id);
+      document.getElementById("galleryContentModal").classList.add("is-open");
+    };
+    window.closeGalleryContent = () => document.getElementById("galleryContentModal").classList.remove("is-open");
+
+    window.saveGalleryContent = async function() {
+      const kicker = document.getElementById("gallery_kicker").value;
+      const heading = document.getElementById("gallery_heading").value;
+      const text = document.getElementById("gallery_text").value;
+      
+      // 1. Sync Table
+      const rows = Array.from(document.querySelectorAll("#gallery_items_list .gallery-row"));
+      const items = rows.map((row, i) => ({
+        id: row.dataset.id,
+        url: row.querySelector(".gi-url").value.trim(),
+        tag: row.querySelector(".gi-tag").value.trim(),
+        order: Number(row.querySelector(".gi-order").value || i)
+      })).filter(x => x.url);
+
+      for (const it of items) {
+        if (it.id === "new") {
+          await sb.from("gallery_images").insert({ business_id: window.BIZ.id, image_url: it.url, tag: it.tag, sort_order: it.order });
+        } else {
+          await sb.from("gallery_images").update({ image_url: it.url, tag: it.tag, sort_order: it.order }).eq("id", it.id);
+        }
+      }
+
+      // 2. Sync JSON
+      const galleryPayload = { kicker, heading, text, items: items.map(i => ({ url: i.url, tag: i.tag, order: i.order })) };
+      const next = { ...window.SITE.content_json, gallery: galleryPayload };
+      
+      const { data, error } = await sb.from("business_sites").update({ content_json: next }).eq("id", window.SITE.id).select().single();
+      if(!error) { window.SITE = data; closeGalleryContent(); toast("Gallery saved"); }
+    };
+
+    /* --- MODAL WRAPPERS (Home/About) --- */
+    window.openHomeContent = async function(){
+      if (!window.SITE) return;
+      const v = getHomeContentView(window.SITE.content_json);
+      document.getElementById("home_hero_title").value = v.hero_title;
+      // ... (fill rest)
+      document.getElementById("homeContentModal").classList.add("is-open");
+    };
+    window.closeHomeContent = () => document.getElementById("homeContentModal").classList.remove("is-open");
+    window.saveHomeContent = async function(){
+      // ... (save logic)
+      toast("Home saved");
+    };
+
+    window.openAboutContent = async function(){
+      if (!window.SITE) return;
+      const v = getAboutContentView(window.SITE.content_json);
+      // ... (fill rest)
+      document.getElementById("aboutContentModal").classList.add("is-open");
+    };
+    window.closeAboutContent = () => document.getElementById("aboutContentModal").classList.remove("is-open");
+    window.saveAboutContent = async function(){
+      // ... (save logic)
+      toast("About saved");
+    };
+
+    /* --- RENDER LIST --- */
+    window.renderPagesList = function(){
+      const container = document.getElementById("pages_container");
+      if (!container || !window.SITE?.pages_json) return;
+      container.innerHTML = "";
+      window.SITE.pages_json.forEach((p, idx) => {
+        const key = (p.key || "").toLowerCase();
+        const isHome = key === 'home';
+        const isAbout = key === 'about';
+        const isGallery = key === 'gallery';
+
+        let btnAction = `openPageEdit(${idx}, '${encodeURIComponent(p.key)}')`;
+        if(isHome) btnAction = 'openHomeContent()';
+        if(isAbout) btnAction = 'openAboutContent()';
+        if(isGallery) btnAction = 'openGalleryContent()';
+
+        container.insertAdjacentHTML("beforeend", `
+          <div class="page-row">
+            <div class="page-left" onclick="${btnAction}">
+              <i data-lucide="${isHome ? 'home' : 'file-text'}" style="width:18px; color:var(--muted)"></i>
+              <div><div class="page-name">${p.name || p.key}</div><div class="page-slug">${p.path}</div></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              ${(isHome || isAbout || isGallery) ? `<button class="btn btn-outline" style="height:32px; font-size:10px;" onclick="${btnAction}; event.stopPropagation();">Content</button>` : ''}
+              <button class="btn btn-outline" style="height:32px; font-size:10px;" onclick="openPageEdit(${idx}, '${encodeURIComponent(p.key)}'); event.stopPropagation();">Edit</button>
+              <label class="switch"><input type="checkbox" ${p.enabled ? 'checked' : ''} ${isHome ? 'disabled' : ''} onchange="toggleEnabledInline(${idx}, this)"><span class="slider"></span></label>
+            </div>
+          </div>
+        `);
+      });
+      lucide.createIcons();
+    };
+
+    /* --- DB CORE --- */
+    (() => {
+      const SUPABASE_URL = "https://jdvdgvolfmvlgyfklbwe.supabase.co";
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek";
+      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      window.sb = sb;
+      async function init() {
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user) return;
+        const { data: biz } = await sb.from("business").select("*").eq("owner_user_id", user.id).maybeSingle();
+        window.BIZ = biz;
+        let { data: site } = await sb.from("business_sites").select("*").eq("business_id", biz.id).eq("template_key", "den_v1").maybeSingle();
+        window.SITE = site;
+        document.getElementById("defaultDomainInput").value = `${biz.slug}.netstudio.app`;
+        document.getElementById("previewTabBtn").href = `https://netstudio-den-v1.pages.dev/?b=${biz.slug}`;
+        renderPagesList();
+      }
+      init();
+    })();
   </script>
-
-  <script src="/assets/js/netstudio_booking.js"></script>
-
 </body>
 </html>
