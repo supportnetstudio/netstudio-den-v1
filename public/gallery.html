@@ -258,7 +258,6 @@
 
       const list = Array.isArray(rows) ? rows : [];
 
-      // If empty, you can show nothing (clean) OR show placeholders. Keeping it clean:
       if (list.length === 0) {
         grid.innerHTML = `<div style="color:rgba(255,255,255,.65); text-align:center; grid-column:1/-1; padding: 40px 0;">
           No gallery images yet.
@@ -285,7 +284,6 @@
       const c = contentJson || {};
       const g = c.gallery || {};
 
-      // defaults match your hardcoded ones
       const kicker  = pick(g.kicker, "Our Work");
       const heading = pick(g.heading, "Fresh Cuts & Fades");
       const text    = pick(g.text, "Real clients. Real results. No filters. Hover over an image to see the detail.");
@@ -303,13 +301,14 @@
       nsWireHeaderNav();
 
       if (!NS.BUSINESS_SLUG) {
-        // no slug = nothing to load; leave defaults
         if (window.lucide) lucide.createIcons();
         return;
       }
 
       // 1) get business (need id + team_json)
+      // ✅ PATCH: Force schema public to fix 404
       const { data: biz, error: bErr } = await sb
+        .schema("public")
         .from("business")
         .select("id, team_json")
         .eq("slug", NS.BUSINESS_SLUG)
@@ -323,7 +322,9 @@
       const teamMap = buildTeamMap(biz.team_json);
 
       // 2) get site content_json for gallery headings
+      // ✅ PATCH: Force schema public
       const { data: site } = await sb
+        .schema("public")
         .from("business_sites")
         .select("content_json")
         .eq("business_id", biz.id)
@@ -333,8 +334,9 @@
       applyGalleryContent(site?.content_json || {});
 
       // 3) get gallery rows
-      // Based on your CSV: image_url, team_member_id, caption, type, is_profile, created_at...
+      // ✅ PATCH: Force schema public to fix 404
       const { data: rows } = await sb
+        .schema("public")
         .from("gallery_images")
         .select("id, image_url, team_member_id, caption, type, is_profile, created_at")
         .eq("business_id", biz.id)
