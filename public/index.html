@@ -223,53 +223,6 @@
       </footer>
   </div>
 
-  <button type="button" id="homeEditBtn" class="btn" style="position:fixed; right:16px; bottom:16px; z-index:9999; display:none; background: #222; border: 1px solid var(--glass-border);"><i data-lucide="settings"></i> Edit</button>
-
-  <script>
-    // NAV + Link Rewriting Logic
-    (function normalizeBParam(){
-      const s = location.search || "";
-      if (/\?b=/.test(s)) return;
-      const m = s.match(/^\?b(?:=|\+)?([^&]+)/i);
-      if (!m || !m[1]) return;
-      const slug = decodeURIComponent(m[1]);
-      const u = new URL(location.href);
-      u.search = `?b=${encodeURIComponent(slug)}`;
-      history.replaceState({}, "", u.toString());
-    })();
-
-    function nsGetBParam(){
-      const p = new URLSearchParams(location.search);
-      return p.get("b");
-    }
-
-    function nsRewriteInternalLinks(){
-      const b = nsGetBParam();
-      if (!b) return;
-      document.querySelectorAll('a.nav-link[href]').forEach(a => {
-        const href = a.getAttribute("href") || "";
-        if (!href.endsWith(".html")) return;
-        const u = new URL(href, location.href);
-        u.searchParams.set("b", b);
-        const file = u.pathname.split("/").pop();
-        a.setAttribute("href", file + "?" + u.searchParams.toString());
-      });
-    }
-
-    function nsSetActiveNav(){
-      const file = (location.pathname.split("/").pop() || "index.html").toLowerCase();
-      document.querySelectorAll(".nav-link").forEach(a => {
-        const p = (a.getAttribute("data-page") || "").toLowerCase();
-        a.classList.toggle("active", p === file);
-      });
-    }
-
-    (function initNav(){
-      nsRewriteInternalLinks();
-      nsSetActiveNav();
-    })();
-  </script>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     function nsGetSlugFromHost() {
@@ -289,147 +242,117 @@
 
     (() => {
       const NS = window.NS;
-      const EDIT_MODE = new URLSearchParams(location.search).get("edit") === "1";
       const sb = supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
+
+      function nsDayOrder(d){
+        const m = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7 };
+        return m[String(d || "").toLowerCase()] || 99;
+      }
+
+      function nsFmtTime(t){
+        if (!t) return "";
+        const parts = String(t).split(":");
+        const hh = parseInt(parts[0] || "0", 10);
+        const mm = parts[1] || "00";
+        const ampm = hh >= 12 ? "PM" : "AM";
+        const h12 = ((hh + 11) % 12) + 1;
+        return `${h12}:${mm} ${ampm}`;
+      }
+
+      function nsDayLabel(d){
+        const x = String(d || "").toLowerCase();
+        return x ? x.charAt(0).toUpperCase() + x.slice(1) : "";
+      }
+
+      function renderHoursFromRows(rows){
+        const el = document.getElementById("hours_list");
+        if (!el) return;
+        if (!rows || !rows.length) return; // keep fallback in HTML
+
+        const sorted = [...rows].sort((a,b) => nsDayOrder(a.day_of_week) - nsDayOrder(b.day_of_week));
+        el.innerHTML = sorted.map(r => {
+          const day = nsDayLabel(r.day_of_week);
+          const closed = !!r.is_closed || !r.open_time || !r.close_time;
+          const time = closed ? "Closed" : `${nsFmtTime(r.open_time)} - ${nsFmtTime(r.close_time)}`;
+          const style = closed ? `style="color:var(--accent)"` : "";
+          return `<div class="hours-row"><span class="hours-day">${day}</span><span class="hours-time" ${style}>${time}</span></div>`;
+        }).join("");
+      }
+
+      async function loadHours(businessId){
+        const { data, error } = await sb.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("business_id", businessId);
+        return error ? null : data;
+      }
 
       function apply(data) {
         if (!data) return;
-
         const $ = (id) => document.getElementById(id);
 
-        // -----------------------------
-        // BRAND (name -> logos + copyright + visit name)
-        // -----------------------------
         if (data.name) {
           const names = String(data.name).trim().split(/\s+/);
           const first = names[0] || "";
           const rest = names.slice(1).join(" ");
           const logoHTML = rest ? `${first} <span>${rest}</span>` : `${first}`;
-
-          const logoEl = $("header_logo");
-          const footerLogoEl = $("footer_logo");
-          if (logoEl) logoEl.innerHTML = logoHTML;
-          if (footerLogoEl) footerLogoEl.innerHTML = logoHTML;
-
-          const c = $("copyright_name");
-          if (c) c.textContent = data.name;
-
-          const vn = $("visit_name");
-          if (vn) vn.textContent = data.name;
+          if($("header_logo")) $("header_logo").innerHTML = logoHTML;
+          if($("footer_logo")) $("footer_logo").innerHTML = logoHTML;
+          if($("copyright_name")) $("copyright_name").textContent = data.name;
+          if($("visit_name")) $("visit_name").textContent = data.name;
         }
 
-        // -----------------------------
-        // HERO
-        // -----------------------------
         const hero = document.querySelector(".hero");
-        if (data.hero_bg && hero) {
-          hero.style.backgroundImage =
-            `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${data.hero_bg}')`;
-        }
+        if (data.hero_bg && hero) hero.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${data.hero_bg}')`;
 
-        if ($("hero_kicker")) $("hero_kicker").innerHTML = data.hero_kicker ?? "Established 2025";
-        if ($("hero_title")) $("hero_title").innerHTML = data.hero_title ?? "Everybody's<br>Barber Shop";
-        if ($("hero_sub")) $("hero_sub").innerHTML = data.hero_sub ?? "";
-        if ($("hero_cta_text")) $("hero_cta_text").textContent = data.hero_cta_text ?? "Book Appointment";
+        if ($("hero_kicker")) $("hero_kicker").innerHTML = data.hero_kicker || "Established 2025";
+        if ($("hero_title")) $("hero_title").innerHTML = data.hero_title || "Everybody's<br>Barber Shop";
+        if ($("hero_sub")) $("hero_sub").innerHTML = data.hero_sub || "";
+        if ($("hero_cta_text")) $("hero_cta_text").textContent = data.hero_cta_text || "Book Appointment";
+        if (data.hero_cta_href && $("hero_cta")) $("hero_cta").setAttribute("href", data.hero_cta_href);
 
-        if (data.hero_cta_href && $("hero_cta")) {
-          $("hero_cta").setAttribute("href", data.hero_cta_href);
-        }
+        if (data.about_kicker && $("about_kicker")) $("about_kicker").textContent = data.about_kicker;
+        if (data.about_heading && $("about_heading")) $("about_heading").textContent = data.about_heading;
+        if (data.about_text && $("about_text")) $("about_text").textContent = data.about_text;
 
-        // -----------------------------
-        // ABOUT (kicker + heading + text)
-        // -----------------------------
-        if (data.about_kicker != null && $("about_kicker")) $("about_kicker").textContent = data.about_kicker;
-        if (data.about_heading != null && $("about_heading")) $("about_heading").textContent = data.about_heading;
+        if ($("hiring_card")) $("hiring_card").style.display = (data.hiring_enabled === false) ? "none" : "";
+        if (data.hiring_kicker && $("hiring_kicker")) $("hiring_kicker").textContent = data.hiring_kicker;
+        if (data.hiring_title && $("hiring_title")) $("hiring_title").textContent = data.hiring_title;
+        if (data.hiring_text && $("hiring_text")) $("hiring_text").textContent = data.hiring_text;
+        if (data.hiring_cta_text && $("hiring_cta_text")) $("hiring_cta_text").textContent = data.hiring_cta_text;
+        if (data.hiring_cta_href && $("hiring_cta")) $("hiring_cta").setAttribute("href", data.hiring_cta_href);
 
-        const aboutVal = (data.about_text != null) ? data.about_text : data.about;
-        if (aboutVal != null && $("about_text")) $("about_text").textContent = aboutVal;
-
-        // -----------------------------
-        // HIRING CARD (toggle + content + link)
-        // -----------------------------
-        if ($("hiring_card")) {
-          const enabled = (data.hiring_enabled === undefined) ? true : !!data.hiring_enabled;
-          $("hiring_card").style.display = enabled ? "" : "none";
-        }
-
-        if (data.hiring_kicker != null && $("hiring_kicker")) $("hiring_kicker").textContent = data.hiring_kicker;
-        if (data.hiring_title != null && $("hiring_title")) $("hiring_title").textContent = data.hiring_title;
-        if (data.hiring_text != null && $("hiring_text")) $("hiring_text").textContent = data.hiring_text;
-        if (data.hiring_cta_text != null && $("hiring_cta_text")) $("hiring_cta_text").textContent = data.hiring_cta_text;
-
-        if (data.hiring_cta_href && $("hiring_cta")) {
-          $("hiring_cta").setAttribute("href", data.hiring_cta_href);
-        }
-
-        // -----------------------------
-        // VISIT CARD (kicker + address + phone + map)
-        // -----------------------------
-        if (data.visit_kicker != null && $("visit_kicker")) $("visit_kicker").textContent = data.visit_kicker;
-
-        if (data.address_html != null && $("visit_address")) {
-          $("visit_address").innerHTML = data.address_html;
-        }
-
-        if (data.phone != null && $("visit_phone")) $("visit_phone").textContent = data.phone;
+        if (data.visit_kicker && $("visit_kicker")) $("visit_kicker").textContent = data.visit_kicker;
+        if (data.address_html && $("visit_address")) $("visit_address").innerHTML = data.address_html;
+        if (data.phone && $("visit_phone")) $("visit_phone").textContent = data.phone;
 
         if (data.map_q && $("visit_map")) {
-          const mapUrl = `https://maps.google.com/maps?q=$${encodeURIComponent(data.map_q)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
+          const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(data.map_q)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
           $("visit_map").src = mapUrl;
         }
 
-        // -----------------------------
-        // HOURS (kicker + html list)
-        // -----------------------------
-        if (data.hours_kicker != null && $("hours_kicker")) $("hours_kicker").textContent = data.hours_kicker;
-
-        if (data.hours_html != null && $("hours_list")) {
-          $("hours_list").innerHTML = data.hours_html;
-        }
-
-        // -----------------------------
-        // ICONS + REVEAL
-        // -----------------------------
         if (window.lucide) lucide.createIcons();
-        if ($("main-content")) $("main-content").style.opacity = "1";
+        document.getElementById("main-content").style.opacity = "1";
       }
 
       async function getBusinessId() {
-        // ✅ Explicit fail if slug is missing
         if (!NS.BUSINESS_SLUG) return null;
-
-        const { data, error } = await sb
-          .from("business")
-          .select("id")
-          .eq("slug", NS.BUSINESS_SLUG)
-          .maybeSingle();
-
-        if (error || !data) return null;
-        return data.id;
+        const { data, error } = await sb.from("business").select("id").eq("slug", NS.BUSINESS_SLUG).maybeSingle();
+        return (error || !data) ? null : data.id;
       }
 
       async function load() {
-        try {
-          const bId = await getBusinessId();
-          if (!bId) {
-            document.getElementById("site-error").style.display = "block";
-            return null;
-          }
-          document.getElementById("nsdBusiness")?.setAttribute("data-business-id", bId);
-          document.body.dataset.businessId = bId;
-          const { data } = await sb.from("business_sites").select("content_json").eq("business_id", bId).eq("template_key", NS.TEMPLATE_KEY).maybeSingle();
-          return data?.content_json;
-        } catch(e) { return null; }
+        const bId = await getBusinessId();
+        if (!bId) { document.getElementById("site-error").style.display = "block"; return null; }
+        document.body.dataset.businessId = bId;
+        const { data } = await sb.from("business_sites").select("content_json").eq("business_id", bId).eq("template_key", NS.TEMPLATE_KEY).maybeSingle();
+        return data?.content_json;
       }
 
-      load().then(data => {
-        apply(data || {});
+      load().then(async (content) => {
+        const bId = document.body.dataset.businessId;
+        const hours = bId ? await loadHours(bId) : null;
+        apply(content || {});
+        renderHoursFromRows(hours || []);
       });
-      
-      if (EDIT_MODE) document.getElementById("homeEditBtn").style.display = "inline-flex";
     })();
   </script>
-
-  <script src="/assets/js/netstudio_booking.js"></script>
 </body>
 </html>
