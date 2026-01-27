@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>The Den — Services</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
   <script src="https://unpkg.com/lucide@latest"></script>
   
   <style>
@@ -27,6 +28,12 @@
       max-width: 100%; 
       overflow-x: hidden; 
     }
+    
+    img, iframe { 
+      max-width: 100%; 
+      height: auto; 
+      display: block; 
+    }
 
     body {
       background: var(--bg-gradient);
@@ -39,7 +46,25 @@
       flex-direction: column;
     }
 
+    /* --- UTILITIES --- */
     .container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+    
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: white;
+      padding: 10px 20px; border-radius: 4px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      text-decoration: none; font-size: 11px; border: none; cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    
+    .section-title {
+      font-size: 11px; color: var(--accent); letter-spacing: 0.25em;
+      text-transform: uppercase; font-weight: 800; margin-bottom: 10px; display: block;
+      text-align: center;
+    }
+    h2 { font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 40px; }
 
     /* --- HEADER --- */
     header {
@@ -55,76 +80,90 @@
       height: 70px;
     }
 
-    /* Logo Styling */
-    #brandLogo { display: flex; align-items: center; text-decoration: none; }
-    #brandLogo img {
-      height: 40px; 
-      width: auto;
-      display: block;
-      object-fit: contain;
-    }
-    #brandLogo span { 
-      font-weight: 900; font-size: 20px; text-transform: uppercase; 
-      letter-spacing: 0.1em; font-style: italic; color: white;
-    }
-
-    /* Desktop Nav */
-    .nav-links { display: flex; gap: 24px; }
-    .nav-links a { 
-      color: var(--text-muted); 
-      text-decoration: none; 
-      font-size: 12px; 
-      font-weight: 600; 
+    .logo { 
+      font-weight: 900; 
+      font-size: 20px; 
       text-transform: uppercase; 
-      cursor: pointer; 
-      transition: 0.2s;
+      letter-spacing: 0.1em; 
+      font-style: italic; 
+      display: flex;
+      align-items: center;
     }
-    .nav-links a:hover, .nav-links a.active { color: white; }
+    .logo span { color: var(--accent); }
 
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--accent); color: white;
-      padding: 10px 20px; border-radius: 4px;
-      font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-      text-decoration: none; font-size: 11px; border: none; cursor: pointer;
+    .nav-links {
+      display: flex;
+      gap: 24px;
     }
 
-    /* --- MOBILE: 2-ROW HEADER --- */
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active { color: #fff; }
+
+    /* --- MOBILE REFINEMENT --- */
     @media (max-width: 768px) {
-      body { padding-top: 130px; }
-      header { padding-bottom: 8px; }
-      .nav-wrap { 
-        height: auto; 
-        flex-direction: column; 
-        align-items: center; 
-        gap: 10px; 
-        padding: 14px 0 10px; 
+      header { padding: 6px 0; }
+
+      .nav-wrap {
+        flex-direction: column;
+        height: auto;
+        gap: 8px;
+        padding: 10px 0;
       }
+
+      .logo { font-size: 18px; }
+
       .nav-links {
-        justify-content: center;
-        width: 100%;
-        gap: 15px;
+        display: flex;
         flex-wrap: wrap;
+        justify-content: center;
+        gap: 14px;
+        width: 100%;
       }
-      .nav-links a { font-size: 11px; }
-      #brandLogo img { height: 48px; }
-      #bookBtn { width: 80%; justify-content: center; }
+
+      .nav-links a {
+        font-size: 11px;
+        letter-spacing: 0.12em;
+      }
+
+      .btn {
+        margin-top: 6px;
+        padding: 8px 14px;
+        font-size: 10px;
+      }
+
+      body { padding-top: 140px; } /* Increased for taller mobile header */
     }
 
-    /* --- SERVICES --- */
-    main { flex: 1; margin-top: 40px; }
+    /* --- SERVICE LIST STYLES --- */
+    main { flex: 1; }
     .service-category { margin-bottom: 40px; }
     .cat-title { 
       font-size: 13px; color: var(--text-muted); text-transform: uppercase; 
       letter-spacing: 0.1em; border-bottom: 1px solid var(--glass-border); 
       padding-bottom: 10px; margin-bottom: 20px; font-weight: 700;
     }
+
     .service-item {
       display: flex; justify-content: space-between; align-items: center;
       padding: 20px; background: var(--glass); border: 1px solid var(--glass-border);
-      border-radius: 8px; margin-bottom: 12px;
+      border-radius: 8px; margin-bottom: 12px; transition: 0.2s;
     }
+    
+    @media (min-width: 769px) {
+      .service-item:hover { border-color: var(--accent); transform: translateX(5px); }
+    }
+    
     .svc-name { font-weight: 700; font-size: 16px; color: white; }
+    .svc-desc { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
     .svc-price { font-size: 18px; font-weight: 700; color: var(--accent); }
     .svc-right { display: flex; align-items: center; gap: 20px; }
 
@@ -137,141 +176,203 @@
       font-size: 13px; 
       background: #000;
     }
+
+    @media (max-width: 768px) {
+      .service-item { flex-direction: column; align-items: flex-start; gap: 15px; }
+      .svc-right { width: 100%; justify-content: space-between; }
+    }
   </style>
 </head>
 <body>
 
   <header>
     <div class="container nav-wrap" style="max-width: 1100px;">
-      <a class="logo" id="brandLogo" data-page="index.html">
-        <span>THE <i>DEN</i></span>
-      </a>
-      <nav class="nav-links" id="mainNav">
-        <a data-page="index.html">Home</a>
-        <a data-page="about.html">About</a>
-        <a data-page="services.html" class="active">Services</a>
-        <a data-page="gallery.html">Gallery</a>
-        <a data-page="team.html">Team</a>
-        <a data-page="contact.html">Contact</a>
+      <div class="logo" id="nsLogoWrap">
+        <span>Loading...</span>
+      </div>
+
+      <nav class="nav-links" aria-label="Primary">
+        <a class="nav-link" href="index.html" data-page="index.html">Home</a>
+        <a class="nav-link" href="about.html" data-page="about.html">About</a>
+        <a class="nav-link" href="services.html" data-page="services.html">Services</a>
+        <a class="nav-link" href="gallery.html" data-page="gallery.html">Gallery</a>
+        <a class="nav-link" href="team.html" data-page="team.html">Team</a>
+        <a class="nav-link" href="contact.html" data-page="contact.html">Contact</a>
       </nav>
-      <a href="#" onclick="openBooking(); return false;" class="btn" id="bookBtn">Book Now</a>
+
+      <a href="#" onclick="openBooking(); return false;" class="btn">Book Now</a>
     </div>
   </header>
 
-  <main class="container">
-    <h2 style="font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 40px;">Service Price List</h2>
+  <main class="container" style="margin-top: 40px;">
+    <span class="section-title">The Menu</span>
+    <h2>Service Price List</h2>
+
     <div id="servicesMount"></div>
+
+    <div style="background: rgba(239, 68, 68, 0.05); border: 1px dashed var(--accent); border-radius: 12px; padding: 30px; text-align: center; margin-top: 60px;">
+      <h3 style="color: var(--accent); font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.1em;">Walk-Ins Welcome</h3>
+      <p style="font-size: 13px; color: var(--text-muted); max-width: 600px; margin: 0 auto;">
+        Appointments are prioritized. Walk-ins will be served based on availability.
+        <br><strong>Open Mon-Sat. Closed Sunday.</strong>
+      </p>
+    </div>
   </main>
 
   <footer>
-    <div class="container">
-      <p>© 2026 Net Studio Barbershop Engine.</p>
+    <div class="container" style="max-width: 1100px;">
+      <div id="nsFooterLogo" class="logo" style="justify-content: center; margin-bottom: 20px;"></div>
+      <p style="margin-bottom: 10px;">© 2026 The Den Barbershop.</p>
     </div>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <script>
-    // --- 1. CONFIG & CLIENT ---
-    const SUPABASE_URL = "https://jdvdgvolfmvlgyfklbwe.supabase.co";
-    const SUPABASE_KEY = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek";
-    
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // --- URL Normalizer & Persistence ---
+    (function normalizeBParam(){
+      const s = location.search || "";
+      const m = s.match(/^\?b(?:=|\+)?([^&]+)/i);
+      if (!m || !m[1]) return;
+      const slug = decodeURIComponent(m[1]);
+      const u = new URL(location.href);
+      if (!s.includes("?b=")) {
+        u.search = `?b=${encodeURIComponent(slug)}`;
+        history.replaceState({}, "", u.toString());
+      }
+    })();
 
-    // --- 2. UTILS: SLUG & LINKS ---
-    function nsGetSlug() {
+    function nsGetBParam(){
       const p = new URLSearchParams(location.search);
-      const b = p.get("b");
-      if (b) return b.toLowerCase();
-      const m = location.search.match(/^\?b(?:=|\+)?([^&]+)/i);
-      return m ? decodeURIComponent(m[1]).toLowerCase() : "the-den";
+      return p.get("b");
     }
 
-    const currentSlug = nsGetSlug();
-
-    function nsBindNavLinks() {
-      document.querySelectorAll("a[data-page]").forEach(a => {
-        const page = a.getAttribute("data-page");
-        const u = new URL(page, location.origin);
-        u.searchParams.set("b", currentSlug);
-        a.setAttribute("href", u.pathname + u.search);
+    function nsRewriteInternalLinks(){
+      const b = nsGetBParam();
+      if (!b) return;
+      document.querySelectorAll('a.nav-link[href]').forEach(a => {
+        const href = a.getAttribute("href") || "";
+        if (!href.endsWith(".html")) return;
+        const u = new URL(href, location.href);
+        u.searchParams.set("b", b);
+        a.setAttribute("href", u.pathname.split("/").pop() + "?" + u.searchParams.toString());
       });
     }
 
-    // --- 3. DATA LOADING ---
-    async function nsInit() {
-      // Load Business & Branding
-      const { data: bData } = await sb.from("business").select("*").eq("slug", currentSlug).maybeSingle();
-      
-      if (bData) {
-        window.BUSINESS_ID = bData.id;
-        document.body.dataset.businessId = bData.id;
-        
-        // Apply Logo
-        const brand = document.getElementById("brandLogo");
-        if (bData.logo_url) {
-          brand.innerHTML = `<img src="${bData.logo_url}" alt="${bData.name}">`;
-        } else {
-          brand.innerHTML = `<span>${bData.name.toUpperCase()}</span>`;
-        }
-      }
-
-      // Load Services
-      if (window.BUSINESS_ID) {
-        const { data: sData } = await sb.from("menu_items").select("*").eq("business_id", window.BUSINESS_ID).eq("is_active", true);
-        renderServices(sData || []);
-      }
-
-      nsBindNavLinks();
-      nsLoadBookingScript();
+    function nsSetActiveNav(){
+      const file = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+      document.querySelectorAll(".nav-link").forEach(a => {
+        const p = (a.getAttribute("data-page") || "").toLowerCase();
+        a.classList.toggle("active", p === file);
+      });
     }
 
-    function renderServices(items) {
+    (function initNav(){
+      nsRewriteInternalLinks();
+      nsSetActiveNav();
+    })();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // --- SaaS Engine Logic ---
+    window.NS = {
+      ...(window.NS || {}),
+      SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
+      BUSINESS_SLUG: nsGetBParam()
+    };
+
+    const sb = window.supabaseClient || window.supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
+    window.supabaseClient = sb;
+
+    async function nsLoadBusinessId() {
+      if (!window.NS.BUSINESS_SLUG) return null;
+      const { data, error } = await sb
+        .from("business")
+        .select("id")
+        .eq("slug", window.NS.BUSINESS_SLUG)
+        .maybeSingle();
+      if (error || !data) return null;
+      window.BUSINESS_ID = data.id;
+      document.body.dataset.businessId = data.id;
+      return data.id;
+    }
+
+    async function nsLoadBusinessBranding() {
+      if (!window.NS.BUSINESS_SLUG) return;
+
+      const { data, error } = await sb
+        .from("business")
+        .select("name, logo_url")
+        .eq("slug", window.NS.BUSINESS_SLUG)
+        .maybeSingle();
+
+      if (error || !data) return;
+
+      const wrap = document.getElementById("nsLogoWrap");
+      const footerWrap = document.getElementById("nsFooterLogo");
+      
+      const logoHTML = data.logo_url 
+        ? `<img src="${data.logo_url}" alt="${data.name}" style="height:34px; max-width:180px; object-fit:contain;">`
+        : `<span>${data.name.toUpperCase()}</span>`;
+
+      if (wrap) wrap.innerHTML = logoHTML;
+      if (footerWrap) footerWrap.innerHTML = logoHTML;
+    }
+
+    async function loadMenuItems() {
+      if (!window.BUSINESS_ID) return;
+      const { data, error } = await sb
+        .from("menu_items")
+        .select("*")
+        .eq("business_id", window.BUSINESS_ID)
+        .eq("is_active", true);
+      if (error) return;
+      renderMenuItems(data || []);
+    }
+
+    function renderMenuItems(items) {
       const mount = document.getElementById("servicesMount");
       if (!mount) return;
       mount.innerHTML = "";
-
+      if (!items.length) {
+        mount.innerHTML = `<div style="text-align:center; color: var(--text-muted); padding: 40px 0;">No services found.</div>`;
+        return;
+      }
       const groups = {};
       items.forEach(i => {
-        const cat = i.category || "General";
+        const cat = (i.category || "Other").trim();
         (groups[cat] ||= []).push(i);
       });
-
       Object.entries(groups).forEach(([cat, svcs]) => {
         const catBlock = document.createElement("div");
         catBlock.className = "service-category";
         catBlock.innerHTML = `<div class="cat-title">${cat}</div>`;
-        
         svcs.forEach(s => {
+          const p = s.price_cents ? `$${(s.price_cents/100).toFixed(2)}` : (s.price ? `$${Number(s.price).toFixed(2)}` : "");
           const row = document.createElement("div");
           row.className = "service-item";
-          row.innerHTML = `
-            <div>
-              <div class="svc-name">${s.name}</div>
-              <div style="font-size:12px; color:var(--text-muted)">${s.description || ''}</div>
-            </div>
-            <div class="svc-right">
-              <div class="svc-price">$${(s.price_cents/100).toFixed(2)}</div>
-              <button class="btn" onclick="openBooking('${s.id}')">Book</button>
-            </div>
-          `;
+          row.innerHTML = `<div><div class="svc-name">${s.name}</div>${s.description ? `<div class="svc-desc">${s.description}</div>` : ""}</div><div class="svc-right"><div class="svc-price">${p}</div><button class="btn" onclick="openBooking('${s.id}')">Book</button></div>`;
           catBlock.appendChild(row);
         });
         mount.appendChild(catBlock);
       });
     }
 
-    function nsLoadBookingScript() {
+    function nsLoadBookingScript(){
       const s = document.createElement("script");
       s.src = "/assets/js/netstudio_booking.js";
       s.defer = true;
       document.body.appendChild(s);
     }
 
-    window.openBooking = window.openBooking || function(id) { console.log("Booking ID:", id); };
-
-    // --- 4. START ---
-    nsInit();
+    (async () => {
+      const id = await nsLoadBusinessId();
+      if (id) {
+        await nsLoadBusinessBranding();
+        await loadMenuItems();
+        nsLoadBookingScript();
+      }
+    })();
   </script>
 </body>
 </html>
