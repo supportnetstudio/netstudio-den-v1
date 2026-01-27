@@ -144,9 +144,9 @@
   </header>
 
   <section class="container team-hero">
-    <span class="section-title">The Brotherhood</span>
-    <h1>Meet The Crew</h1>
-    <p style="color: var(--text-muted); max-width: 500px; margin: 0 auto;">
+    <span class="section-title" id="team_kicker">Meet The Crew</span>
+    <h1 id="team_heading">Meet The Crew</h1>
+    <p id="team_text" style="color: var(--text-muted); max-width: 500px; margin: 0 auto;">
       Master barbers dedicated to the craft. We don't just cut hair; we build confidence. Pick your barber and lock in your time.
     </p>
   </section>
@@ -214,7 +214,7 @@
     }
 
     /* --- CREW RENDERER --- */
-    function renderCrew(members) {
+    function renderCrew(members, profileMap) {
       const grid = document.getElementById("crew_grid");
       grid.innerHTML = "";
 
@@ -228,11 +228,19 @@
       }
 
       members.forEach(m => {
-        const name = m.name || "Barber";
-        const role = m.role || "Barber";
-        const img  = m.profile_image_url || "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&q=80&w=600";
-        // ✅ PATCH: Removed reference to m.specialties
-        const bio  = m.bio || "Professional barber at The Den.";
+        const id   = String(m.id || "").trim();
+        const name = (m.name || "Barber");
+        const role = (m.role || "Barber");
+        const bio  = (m.bio || "Professional barber at The Den.");
+
+        // ✅ image priority:
+        // 1) gallery_image (is_profile=true)
+        // 2) team_members.photo_url
+        // 3) fallback
+        const img =
+          (id && profileMap.get(id)) ||
+          m.photo_url ||
+          "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&q=80&w=600";
 
         grid.insertAdjacentHTML("beforeend", `
           <div class="barber-card">
@@ -243,7 +251,7 @@
               <div class="barber-name">${name}</div>
               <span class="barber-role">${role}</span>
               <p class="specialties">${bio}</p>
-              <button class="btn" onclick="openBookingWithStaff('${m.id}')" style="width:100%;">
+              <button class="btn" onclick="openBookingWithStaff('${id}')" style="width:100%;">
                 Book ${name}
               </button>
             </div>
@@ -255,29 +263,108 @@
     async function loadCrew() {
       if (!BUSINESS_SLUG) return;
 
-      // 1) Get business
-      const { data: biz } = await sb.schema("public").from("business").select("id").eq("slug", BUSINESS_SLUG).maybeSingle();
-      if (!biz) return;
+      // 1) business id
+      const { data: biz, error: bErr } = await sb
+        .schema("public")
+        .from("business")
+        .select("id")
+        .eq("slug", BUSINESS_SLUG)
+        .maybeSingle();
 
-      // 2) Only REAL barbers (auth-linked)
-      const { data: members } = await sb
+      if (bErr || !biz?.id) return;
+
+      // 2) ONLY auth-linked members
+      const { data: members, error: mErr } = await sb
         .schema("public")
         .from("team_members")
-        // ✅ PATCH: Removed specialties from select list
-        .select("id, name, role, bio, profile_image_url, user_id, created_at")
+        .select("id, name, role, bio, photo_url, auth_user_id, created_at")
         .eq("business_id", biz.id)
-        .not("user_id", "is", null)
+        .not("auth_user_id", "is", null)      // ✅ ONLY real users
         .order("created_at", { ascending: true });
 
-      renderCrew(members || []);
+      if (mErr) {
+        console.warn("team_members error:", mErr);
+        return;
+      }
+
+      const list = members || [];
+      const ids = list.map(x => String(x.id || "").trim()).filter(Boolean);
+
+      // 3) Pull profile images from gallery_image (is_profile = true)
+      const profileMap = new Map();
+
+      if (ids.length) {
+        const { data: pics, error: pErr } = await sb
+          .schema("public")
+          .from("gallery_image")
+          .select("team_member_id, image_url, created_at")
+          .eq("business_id", biz.id)
+          .eq("is_profile", true)
+          .in("team_member_id", ids)
+          .order("created_at", { ascending: false });
+
+        if (pErr) {
+          console.warn("gallery_image profile error:", pErr);
+        } else {
+          // newest per team_member_id wins
+          (pics || []).forEach(r => {
+            const tm = String(r.team_member_id || "").trim();
+            if (!tm) return;
+            if (!profileMap.has(tm) && r.image_url) profileMap.set(tm, r.image_url);
+          });
+        }
+      }
+
+      renderCrew(list, profileMap);
+    }
+
+    // ✅ PATCH: Content Loader for Team Hero
+    async function loadTeamHeroCopy() {
+      if (!BUSINESS_SLUG) return;
+
+      const { data: biz } = await sb
+        .schema("public")
+        .from("business")
+        .select("id")
+        .eq("slug", BUSINESS_SLUG)
+        .maybeSingle();
+
+      if (!biz?.id) return;
+
+      const { data: site } = await sb
+        .schema("public")
+        .from("business_sites")
+        .select("content_json")
+        .eq("business_id", biz.id)
+        .eq("template_key", "den_v1")
+        .maybeSingle();
+
+      if (!site?.content_json) return;
+
+      const team = (site.content_json.team || {});
+      const kicker  = (team.kicker  || site.content_json.team_kicker  || "Meet The Crew").trim();
+      const heading = (team.heading || site.content_json.team_heading || "Meet The Crew").trim();
+      const text    = (team.text    || site.content_json.team_text    || "").trim();
+
+      const elK = document.getElementById("team_kicker");
+      const elH = document.getElementById("team_heading");
+      const elT = document.getElementById("team_text");
+
+      if (elK && kicker) elK.textContent = kicker;
+      if (elH && heading) elH.textContent = heading;
+      if (elT && text) elT.textContent = text;
     }
 
     window.openBookingWithStaff = function(staffId) {
       if (!window.openBooking) return;
       window.openBooking({ staff_id: staffId });
     };
+    
+    // ✅ DEBUG LOGGER
+    console.log("DEN_TEAM BUILD ✅ v999", Date.now());
 
     nsWireHeaderNav();
+    loadTeamHeroCopy(); // ✅ Call the content loader
     loadCrew();
 
     if (window.lucide) lucide.createIcons();
