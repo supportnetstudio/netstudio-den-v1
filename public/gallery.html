@@ -306,7 +306,7 @@
         if (pErr) {
           console.warn("gallery_image profile error:", pErr);
         } else {
-          // newest per team_member_id wins (because we ordered newest first)
+          // newest per team_member_id wins
           (pics || []).forEach(r => {
             const tm = String(r.team_member_id || "").trim();
             if (!tm) return;
@@ -322,6 +322,9 @@
       if (!window.openBooking) return;
       window.openBooking({ staff_id: staffId });
     };
+    
+    // ✅ DEBUG LOGGER
+    console.log("DEN_TEAM BUILD ✅ v999", Date.now());
 
     nsWireHeaderNav();
     loadCrew();
