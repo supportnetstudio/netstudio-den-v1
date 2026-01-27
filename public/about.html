@@ -105,11 +105,11 @@
       <div class="about-grid">
         <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=1000" alt="Barbershop interior" class="about-img" id="about_image_1">
         <div>
-          <h2 style="font-size: 28px; margin-bottom: 20px;">The Neighborhood Spot</h2>
-          <p style="color: var(--text-muted); margin-bottom: 20px;">
+          <h2 style="font-size: 28px; margin-bottom: 20px;" id="about_story_title">The Neighborhood Spot</h2>
+          <p style="color: var(--text-muted); margin-bottom: 20px;" id="about_story_text">
             We believe a barbershop should be more than just a place for a haircut. It's a sanctuary, a place for conversation, and a pillar of the community.
           </p>
-          <p style="color: var(--text-muted);">
+          <p style="color: var(--text-muted);" id="about_story_footer">
             Our master barbers combine old-school techniques with modern styles to ensure you leave looking and feeling your best.
           </p>
         </div>
@@ -170,28 +170,40 @@
           return "";
         };
 
-        // About Page Specific Keys
-        if ($("about_kicker")) $("about_kicker").textContent = pick(c.about_kicker, "Our Story");
-        if ($("about_heading")) $("about_heading").textContent = pick(c.about_heading, "A Tradition of Excellence");
-        if ($("about_text")) $("about_text").textContent = pick(c.about_text, c.about, $("about_text").textContent);
-        
-        if (c.about_hero_bg && document.querySelector('.about-hero')) {
-           // support for a custom about hero background if we add it to builder later
-        }
+        // ✅ About Page Specific Keys (Sync with nested & flat paths)
+        const aboutN = c.about || {};
+
+        if ($("about_kicker"))  $("about_kicker").textContent = pick(c.about_kicker, aboutN.kicker, "Our Story");
+        if ($("about_heading")) $("about_heading").textContent = pick(c.about_heading, aboutN.heading, "A Tradition of Excellence");
+        if ($("about_text"))    $("about_text").textContent   = pick(c.about_text, aboutN.text, aboutN.body, $("about_text").textContent);
 
         document.getElementById("main-content").style.opacity = "1";
         if (window.lucide) lucide.createIcons();
       }
 
       async function init() {
-        if (!NS.BUSINESS_SLUG) { document.getElementById("site-error").style.display = "block"; return; }
+        // ✅ Ensure visibility regardless of data load status
+        const reveal = () => document.getElementById("main-content").style.opacity = "1";
+
+        if (!NS.BUSINESS_SLUG) { 
+            document.getElementById("site-error").style.display = "block"; 
+            reveal();
+            return; 
+        }
+
         const { data: biz, error: bErr } = await sb.from("business").select("id").eq("slug", NS.BUSINESS_SLUG).maybeSingle();
-        if (bErr || !biz) { document.getElementById("site-error").style.display = "block"; return; }
+        
+        if (bErr || !biz) { 
+            document.getElementById("site-error").style.display = "block"; 
+            reveal();
+            return; 
+        }
 
         const { data: site } = await sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", NS.TEMPLATE_KEY).maybeSingle();
         
-        apply(site?.content_json || {});
+        // ✅ Nav rewrites before content apply to ensure links are hot
         nsWireHeaderNav();
+        apply(site?.content_json || {});
       }
 
       init();
