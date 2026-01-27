@@ -68,30 +68,12 @@
     .nav-links a:hover,
     .nav-links a.active { color: #fff; }
 
-    /* --- MOBILE HEADER (show all links) --- */
+    /* --- MOBILE HEADER --- */
     @media (max-width: 768px) {
       header { padding: 6px 0; }
-
-      .nav-wrap {
-        flex-direction: column;
-        height: auto;
-        gap: 8px;
-        padding: 10px 0;
-      }
-
-      .nav-links {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 14px;
-        width: 100%;
-      }
-
-      .nav-links a.nav-link {
-        font-size: 11px;
-        letter-spacing: 0.12em;
-      }
-
+      .nav-wrap { flex-direction: column; height: auto; gap: 8px; padding: 10px 0; }
+      .nav-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; width: 100%; }
+      .nav-links a.nav-link { font-size: 11px; letter-spacing: 0.12em; }
       body { padding-top: 140px; }
     }
 
@@ -135,12 +117,10 @@
 
     footer { border-top: 1px solid var(--glass-border); padding: 60px 0; margin-top: 60px; text-align: center; color: var(--text-muted); font-size: 13px; }
     
-    /* Error state */
     #site-error { display: none; text-align: center; padding: 100px 20px; color: #666; font-size: 14px; }
   </style>
 
   <script>
-    // ✅ Safe stubs for booking engine
     window.openBooking = window.openBooking || function () { console.warn("Booking engine not yet loaded."); };
     window.closeBooking = window.closeBooking || function () {};
   </script>
@@ -183,25 +163,27 @@
 
       <div class="container info-grid" id="about">
         <div>
-          <span class="section-title">About Us</span>
-          <h2>A Back Home Kinda Thang</h2>
+          <span class="section-title" id="about_kicker">About Us</span>
+          <h2 id="about_heading">A Back Home Kinda Thang</h2>
           <p id="about_text" style="color:var(--text-muted); margin-bottom:20px;">
             At The Den Barbershop, we're more than just a place to get a haircut. 
           </p>
 
-          <div class="glass-card" style="margin-top:40px;">
-            <span class="section-title">Join The Team</span>
-            <h3 style="font-size:24px; font-weight:800; margin-bottom:10px;">We Are Hiring Barbers</h3>
-            <p style="font-size:14px; color:var(--text-muted); margin-bottom:20px;">
+          <div class="glass-card" id="hiring_card" style="margin-top:40px;">
+            <span class="section-title" id="hiring_kicker">Join The Team</span>
+            <h3 id="hiring_title" style="font-size:24px; font-weight:800; margin-bottom:10px;">We Are Hiring Barbers</h3>
+            <p id="hiring_text" style="font-size:14px; color:var(--text-muted); margin-bottom:20px;">
               Looking for a chair in a high-traffic shop with a great culture?
             </p>
-            <button class="btn" style="background:white; color:black;">Apply Here</button>
+            <a id="hiring_cta" class="btn" href="#" style="background:white; color:black;">
+              <span id="hiring_cta_text">Apply Here</span>
+            </a>
           </div>
         </div>
 
         <div id="contact">
           <div class="glass-card">
-            <span class="section-title">Visit Us</span>
+            <span class="section-title" id="visit_kicker">Visit Us</span>
             <div class="map-frame">
               <iframe 
                 id="visit_map" 
@@ -222,10 +204,12 @@
             </div>
 
             <div style="border-top:1px solid var(--glass-border); padding-top:20px;">
-              <span class="section-title">Opening Hours</span>
-              <div class="hours-row"><span class="hours-day">Mon - Fri</span><span class="hours-time">9:00 AM - 7:00 PM</span></div>
-              <div class="hours-row"><span class="hours-day">Saturday</span><span class="hours-time">9:00 AM - 7:00 PM</span></div>
-              <div class="hours-row"><span class="hours-day">Sunday</span><span class="hours-time" style="color:var(--accent)">Closed</span></div>
+              <span class="section-title" id="hours_kicker">Opening Hours</span>
+              <div id="hours_list">
+                <div class="hours-row"><span class="hours-day">Mon - Fri</span><span class="hours-time">9:00 AM - 7:00 PM</span></div>
+                <div class="hours-row"><span class="hours-day">Saturday</span><span class="hours-time">9:00 AM - 7:00 PM</span></div>
+                <div class="hours-row"><span class="hours-day">Sunday</span><span class="hours-time" style="color:var(--accent)">Closed</span></div>
+              </div>
             </div>
           </div>
         </div>
@@ -242,18 +226,12 @@
   <button type="button" id="homeEditBtn" class="btn" style="position:fixed; right:16px; bottom:16px; z-index:9999; display:none; background: #222; border: 1px solid var(--glass-border);"><i data-lucide="settings"></i> Edit</button>
 
   <script>
-    // =====================================
-    // NAV: keep ?b=slug across pages + active state
-    // =====================================
-
-    // Normalize ?bslug / ?b+slug -> ?b=slug
+    // NAV + Link Rewriting Logic
     (function normalizeBParam(){
       const s = location.search || "";
       if (/\?b=/.test(s)) return;
-
       const m = s.match(/^\?b(?:=|\+)?([^&]+)/i);
       if (!m || !m[1]) return;
-
       const slug = decodeURIComponent(m[1]);
       const u = new URL(location.href);
       u.search = `?b=${encodeURIComponent(slug)}`;
@@ -265,24 +243,19 @@
       return p.get("b");
     }
 
-    // Rewrite internal links to include ?b=...
     function nsRewriteInternalLinks(){
       const b = nsGetBParam();
       if (!b) return;
-
       document.querySelectorAll('a.nav-link[href]').forEach(a => {
         const href = a.getAttribute("href") || "";
         if (!href.endsWith(".html")) return;
-
         const u = new URL(href, location.href);
         u.searchParams.set("b", b);
-
         const file = u.pathname.split("/").pop();
         a.setAttribute("href", file + "?" + u.searchParams.toString());
       });
     }
 
-    // Active tab
     function nsSetActiveNav(){
       const file = (location.pathname.split("/").pop() || "index.html").toLowerCase();
       document.querySelectorAll(".nav-link").forEach(a => {
@@ -299,17 +272,11 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // --- ROUTE A1: Auto-Detect Slug ---
     function nsGetSlugFromHost() {
-      // 1) Prefer ?b= always
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return qp.toLowerCase();
-
-      // 2) Fallback: {slug}.netstudio.app
       const host = location.hostname.toLowerCase();
       if (host.endsWith(".netstudio.app")) return host.split(".")[0];
-
-      console.warn("NS: No slug found in URL.");
       return null;
     }
 
@@ -325,106 +292,143 @@
       const EDIT_MODE = new URLSearchParams(location.search).get("edit") === "1";
       const sb = supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
 
-      // --- 1. Apply content to DOM ---
       function apply(data) {
         if (!data) return;
-        
-        // Brand Identity
+
+        const $ = (id) => document.getElementById(id);
+
+        // -----------------------------
+        // BRAND (name -> logos + copyright + visit name)
+        // -----------------------------
         if (data.name) {
-          const names = data.name.split(' ');
-          const first = names[0];
-          const rest = names.slice(1).join(' ');
-          const logoHTML = `${first} <span>${rest}</span>`;
-          const logoEl = document.getElementById("header_logo");
-          const footerLogoEl = document.getElementById("footer_logo");
-          if(logoEl) logoEl.innerHTML = logoHTML;
-          if(footerLogoEl) footerLogoEl.innerHTML = logoHTML;
-          document.getElementById("copyright_name").textContent = data.name;
+          const names = String(data.name).trim().split(/\s+/);
+          const first = names[0] || "";
+          const rest = names.slice(1).join(" ");
+          const logoHTML = rest ? `${first} <span>${rest}</span>` : `${first}`;
+
+          const logoEl = $("header_logo");
+          const footerLogoEl = $("footer_logo");
+          if (logoEl) logoEl.innerHTML = logoHTML;
+          if (footerLogoEl) footerLogoEl.innerHTML = logoHTML;
+
+          const c = $("copyright_name");
+          if (c) c.textContent = data.name;
+
+          const vn = $("visit_name");
+          if (vn) vn.textContent = data.name;
         }
 
-        // Hero Images
+        // -----------------------------
+        // HERO
+        // -----------------------------
         const hero = document.querySelector(".hero");
         if (data.hero_bg && hero) {
-          hero.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${data.hero_bg}')`;
+          hero.style.backgroundImage =
+            `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${data.hero_bg}')`;
         }
 
-        // Text Content
-        document.getElementById("hero_kicker").innerHTML = data.hero_kicker || "Established 2025";
-        document.getElementById("hero_title").innerHTML = data.hero_title || "Everybody's<br>Barber Shop";
-        document.getElementById("hero_sub").innerHTML = data.hero_sub || "";
-        document.getElementById("hero_cta_text").textContent = data.hero_cta_text || "Book Appointment";
-        document.getElementById("visit_name").textContent = data.name || "";
-        document.getElementById("visit_phone").textContent = data.phone || "";
-        document.getElementById("about_text").textContent = data.about || "";
-        
-        // ✅ Map Fix: Use HTTPS and correct standard embed query
-        if (data.map_q) {
-          const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(data.map_q)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
-          document.getElementById("visit_map").src = mapUrl;
-        }
-        
-        // Render Icons
-        if(window.lucide) lucide.createIcons();
+        if ($("hero_kicker")) $("hero_kicker").innerHTML = data.hero_kicker ?? "Established 2025";
+        if ($("hero_title")) $("hero_title").innerHTML = data.hero_title ?? "Everybody's<br>Barber Shop";
+        if ($("hero_sub")) $("hero_sub").innerHTML = data.hero_sub ?? "";
+        if ($("hero_cta_text")) $("hero_cta_text").textContent = data.hero_cta_text ?? "Book Appointment";
 
-        // Reveal Site
-        document.getElementById("main-content").style.opacity = "1";
+        if (data.hero_cta_href && $("hero_cta")) {
+          $("hero_cta").setAttribute("href", data.hero_cta_href);
+        }
+
+        // -----------------------------
+        // ABOUT (kicker + heading + text)
+        // -----------------------------
+        if (data.about_kicker != null && $("about_kicker")) $("about_kicker").textContent = data.about_kicker;
+        if (data.about_heading != null && $("about_heading")) $("about_heading").textContent = data.about_heading;
+
+        const aboutVal = (data.about_text != null) ? data.about_text : data.about;
+        if (aboutVal != null && $("about_text")) $("about_text").textContent = aboutVal;
+
+        // -----------------------------
+        // HIRING CARD (toggle + content + link)
+        // -----------------------------
+        if ($("hiring_card")) {
+          const enabled = (data.hiring_enabled === undefined) ? true : !!data.hiring_enabled;
+          $("hiring_card").style.display = enabled ? "" : "none";
+        }
+
+        if (data.hiring_kicker != null && $("hiring_kicker")) $("hiring_kicker").textContent = data.hiring_kicker;
+        if (data.hiring_title != null && $("hiring_title")) $("hiring_title").textContent = data.hiring_title;
+        if (data.hiring_text != null && $("hiring_text")) $("hiring_text").textContent = data.hiring_text;
+        if (data.hiring_cta_text != null && $("hiring_cta_text")) $("hiring_cta_text").textContent = data.hiring_cta_text;
+
+        if (data.hiring_cta_href && $("hiring_cta")) {
+          $("hiring_cta").setAttribute("href", data.hiring_cta_href);
+        }
+
+        // -----------------------------
+        // VISIT CARD (kicker + address + phone + map)
+        // -----------------------------
+        if (data.visit_kicker != null && $("visit_kicker")) $("visit_kicker").textContent = data.visit_kicker;
+
+        if (data.address_html != null && $("visit_address")) {
+          $("visit_address").innerHTML = data.address_html;
+        }
+
+        if (data.phone != null && $("visit_phone")) $("visit_phone").textContent = data.phone;
+
+        if (data.map_q && $("visit_map")) {
+          const mapUrl = `https://www.google.com/maps/embed/v1/place?key=YOUR_API_KEY&q=${encodeURIComponent(data.map_q)}`;
+          $("visit_map").src = mapUrl;
+        }
+
+        // -----------------------------
+        // HOURS (kicker + html list)
+        // -----------------------------
+        if (data.hours_kicker != null && $("hours_kicker")) $("hours_kicker").textContent = data.hours_kicker;
+
+        if (data.hours_html != null && $("hours_list")) {
+          $("hours_list").innerHTML = data.hours_html;
+        }
+
+        // -----------------------------
+        // ICONS + REVEAL
+        // -----------------------------
+        if (window.lucide) lucide.createIcons();
+        if ($("main-content")) $("main-content").style.opacity = "1";
       }
 
-      // --- 2. Resolve Slug to Business ID ---
       async function getBusinessId() {
-        console.log("Loading business for slug:", NS.BUSINESS_SLUG);
+        // ✅ Explicit fail if slug is missing
+        if (!NS.BUSINESS_SLUG) return null;
+
         const { data, error } = await sb
           .from("business")
           .select("id")
           .eq("slug", NS.BUSINESS_SLUG)
-          .maybeSingle(); // Returns null if not found, doesn't throw
+          .maybeSingle();
 
-        if (error || !data) {
-          console.warn("Business not found for slug:", NS.BUSINESS_SLUG);
-          return null;
-        }
+        if (error || !data) return null;
         return data.id;
       }
 
-      // --- 3. Load Content ---
       async function load() {
         try {
           const bId = await getBusinessId();
-          
           if (!bId) {
             document.getElementById("site-error").style.display = "block";
             return null;
           }
-
-          // Tag Body for Booking Engine
           document.getElementById("nsdBusiness")?.setAttribute("data-business-id", bId);
           document.body.dataset.businessId = bId;
-
-          // Fetch JSON content
-          const { data } = await sb
-            .from("business_sites")
-            .select("content_json")
-            .eq("business_id", bId)
-            .eq("template_key", NS.TEMPLATE_KEY)
-            .maybeSingle();
-
+          const { data } = await sb.from("business_sites").select("content_json").eq("business_id", bId).eq("template_key", NS.TEMPLATE_KEY).maybeSingle();
           return data?.content_json;
-
-        } catch(e) { 
-          console.error("Load error:", e);
-          return null; 
-        }
+        } catch(e) { return null; }
       }
 
-      // --- 4. Init ---
       load().then(data => {
-        if(data) apply(data);
-        else if(window.lucide) lucide.createIcons();
+        // ✅ Always reveal the template.
+        // If no content_json exists yet, apply defaults via an empty object.
+        apply(data || {});
       });
       
-      if (EDIT_MODE) {
-        document.getElementById("homeEditBtn").style.display = "inline-flex";
-      }
+      if (EDIT_MODE) document.getElementById("homeEditBtn").style.display = "inline-flex";
     })();
   </script>
 
