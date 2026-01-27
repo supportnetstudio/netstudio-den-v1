@@ -178,10 +178,13 @@
         if ($("about_heading")) $("about_heading").textContent = pick(c.about_heading, aboutN.heading, "A Tradition of Excellence");
         if ($("about_text"))    $("about_text").textContent   = pick(c.about_text, aboutN.text, aboutN.body, $("about_text").textContent);
 
-        // ✅ STORY BLOCK
+        // ✅ STORY BLOCK (supports builder nested + flat)
+        const storyN = aboutN.story || {};
+
         if ($("about_story_title")) {
           $("about_story_title").textContent = pick(
             c.about_story_title,
+            storyN.title,
             aboutN.story_title,
             aboutN.neighborhood_title,
             $("about_story_title").textContent
@@ -190,7 +193,9 @@
 
         if ($("about_story_text")) {
           $("about_story_text").textContent = pick(
-            c.about_story_text,
+            c.about_story_p1,          // builder flat mirror
+            c.about_story_text,        // legacy id mirror
+            storyN.p1,                 // ✅ builder nested
             aboutN.story_text,
             aboutN.neighborhood_p1,
             $("about_story_text").textContent
@@ -199,7 +204,9 @@
 
         if ($("about_story_footer")) {
           $("about_story_footer").textContent = pick(
-            c.about_story_footer,
+            c.about_story_p2,          // builder flat mirror
+            c.about_story_footer,      // legacy id mirror
+            storyN.p2,                 // ✅ builder nested
             aboutN.story_footer,
             aboutN.neighborhood_p2,
             $("about_story_footer").textContent
