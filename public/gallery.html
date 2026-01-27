@@ -239,16 +239,14 @@
     }
 
     function overlayForRow(row, teamMap){
-      // If tied to a team member: "Cut by Name"
       const tmId = normalizeId(row?.team_member_id);
       const tmName = tmId ? teamMap.get(tmId) : "";
       if (tmName) return `Cut by ${tmName}`;
 
-      // else fallback to caption (if you want)
       const cap = pick(row?.caption, "");
       if (cap) return cap;
 
-      return "";
+      return "Shop Photo";
     }
 
     function renderGallery(rows, teamMap){
@@ -309,6 +307,7 @@
       }
 
       // 1) get business (need id + team_json)
+      // ✅ PATCH: Force schema public to fix 404
       const { data: biz, error: bErr } = await sb
         .schema("public") // Force public schema
         .from("business")
@@ -324,6 +323,7 @@
       const teamMap = buildTeamMap(biz.team_json);
 
       // 2) get site content_json for gallery headings
+      // ✅ PATCH: Force schema public
       const { data: site } = await sb
         .schema("public") // Force public schema
         .from("business_sites")
