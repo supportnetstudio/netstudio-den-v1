@@ -36,8 +36,20 @@
       border-bottom: 1px solid var(--glass-border);
     }
     .nav-wrap { display: flex; justify-content: space-between; align-items: center; height: 70px; }
-    .logo { font-weight: 900; font-size: 20px; text-transform: uppercase; letter-spacing: 0.1em; font-style: italic; text-decoration: none; color: white; }
-    .logo span { color: var(--accent); }
+    
+    /* Logo Normalization */
+    #brandLogo { display: flex; align-items: center; text-decoration: none; }
+    #brandLogo img {
+      height: 40px; /* Desktop Size */
+      width: auto;
+      display: block;
+      object-fit: contain;
+    }
+    #brandLogo span { 
+      font-weight: 900; font-size: 20px; text-transform: uppercase; 
+      letter-spacing: 0.1em; font-style: italic; color: white;
+    }
+    #brandLogo span i { color: var(--accent); font-style: normal; }
     
     .nav-links { display: flex; gap: 24px; }
     .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 12px; font-weight: 600; text-transform: uppercase; cursor: pointer; }
@@ -56,14 +68,21 @@
       body { padding-top: 130px; }
       header { padding-bottom: 8px; }
       .nav-wrap { height: auto; flex-direction: column; align-items: center; gap: 10px; padding: 14px 0 10px; }
+      
       .nav-links {
         display: flex; gap: 18px; justify-content: center; width: 100%; padding: 0 10px;
         overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
       }
       .nav-links::-webkit-scrollbar { display: none; }
       .nav-links a { white-space: nowrap; font-size: 11px; letter-spacing: .18em; }
+      
       #bookBtn { width: 70%; justify-content: center; }
-      #brandLogo img { height: 34px; width: auto; display: block; }
+      
+      /* Mobile Logo Size */
+      #brandLogo img {
+        height: 48px;
+        width: auto;
+      }
     }
 
     /* --- SERVICE STYLES --- */
@@ -79,7 +98,9 @@
 
   <header>
     <div class="container nav-wrap" style="max-width: 1100px;">
-      <a class="logo" id="brandLogo" data-page="index.html">THE <span>DEN</span></a>
+      <a class="logo" id="brandLogo" data-page="index.html">
+        <span>THE <i>DEN</i></span>
+      </a>
       <nav class="nav-links" id="mainNav">
         <a data-page="index.html">Home</a>
         <a data-page="about.html">About</a>
@@ -110,13 +131,13 @@
 
     window.NS = {
       SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
-      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", // Keep your real key here
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", // Use real key
       BUSINESS_SLUG: nsGetSlug()
     };
 
     const sb = supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
 
-    // --- 2. LOGIC FUNCTIONS ---
+    // --- 2. LOGIC ---
     async function nsLoadBusiness() {
       const { data, error } = await sb.from("business").select("id,name,logo_url").eq("slug", window.NS.BUSINESS_SLUG).maybeSingle();
       if (data) {
@@ -132,9 +153,9 @@
       const brand = document.getElementById("brandLogo");
       if (!brand || !b) return;
       if (b.logo_url) {
-        brand.innerHTML = `<img src="${b.logo_url}" alt="${b.name}" style="height:40px; width:auto;" />`;
+        brand.innerHTML = `<img src="${b.logo_url}" alt="${b.name}" />`;
       } else {
-        brand.textContent = b.name || "THE DEN";
+        brand.innerHTML = `<span>THE <i>DEN</i></span>`;
       }
     }
 
@@ -155,9 +176,18 @@
       if (!data || !mount) return;
       
       mount.innerHTML = "";
-      // (Simple grouping logic omitted for brevity, same as your working version)
       data.forEach(s => {
-        mount.innerHTML += `<div class="service-item"><div class="svc-name">${s.name}</div><div class="svc-price">$${(s.price_cents/100).toFixed(2)}</div></div>`;
+        mount.innerHTML += `
+          <div class="service-item">
+            <div>
+              <div class="svc-name">${s.name}</div>
+              <div style="font-size: 12px; color: var(--text-muted);">${s.description || ''}</div>
+            </div>
+            <div class="svc-right">
+              <div class="svc-price">$${(s.price_cents/100).toFixed(2)}</div>
+              <button class="btn" onclick="openBooking('${s.id}')">Book</button>
+            </div>
+          </div>`;
       });
     }
 
