@@ -177,16 +177,17 @@
             width="100%" 
             height="100%" 
             referrerpolicy="no-referrer-when-downgrade"
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3195.686262423773!2d-76.28974662369666!3d36.77815897225143!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89ba98661609805f%3A0x5e2365265445229c!2s3904%20Bainbridge%20Blvd%2C%20Chesapeake%2C%20VA%2023324!5e0!3m2!1sen!2sus!4v1706630000000!5m2!1sen!2sus">
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3195.404561021464!2d-76.28919632367566!3d36.78453486851628!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89ba980f7a0a0a0d%3A0x1234567890abcdef!2s3904%20Bainbridge%20Blvd%2C%20Chesapeake%2C%20VA%2023324!5e0!3m2!1sen!2sus!4v1700000000000!5m2!1sen!2sus">
           </iframe>
         </div>
 
         <div class="hours-card">
           <h3 style="font-size:16px; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:20px; color:white;">Shop Hours</h3>
-          <div id="hoursContainer">
+          <div id="hours_list">
             <div style="color:var(--text-muted); font-size:13px;">Loading hours...</div>
           </div>
         </div>
+
       </div>
     </div>
   </main>
@@ -211,14 +212,14 @@
   </script>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <script>
-    // ✅ PATCH: Dynamic Slug
     function nsGetSlugFromHost() {
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return qp.toLowerCase();
       const host = location.hostname.toLowerCase();
       if (host.endsWith(".netstudio.app")) return host.split(".")[0];
-      return null;
+      return null; // or fallback
     }
 
     window.NS = window.NS || {
@@ -227,83 +228,88 @@
       BUSINESS_SLUG: nsGetSlugFromHost()
     };
 
-    function formatTime(timeStr) {
-      if (!timeStr) return "";
-      const parts = String(timeStr).split(":");
-      const h = parseInt(parts[0] || "0", 10);
-      const m = (parts[1] || "00").padStart(2, "0");
-      const suffix = h >= 12 ? "PM" : "AM";
-      const displayHour = ((h + 11) % 12) + 1;
-      return `${displayHour}:${m} ${suffix}`;
+    const sb = supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
+
+    function nsDayOrder(d){
+      const m = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7 };
+      return m[String(d || "").toLowerCase()] || 99;
     }
 
-    // ✅ PATCH: Fetch and Render Hours (handles 0-6 OR 1-7 day_of_week)
-    async function loadBusinessHours(sb, businessId) {
-      const container = document.getElementById("hoursContainer");
-      if (!container) return;
+    function nsFmtTime(t){
+      if (!t) return "";
+      const parts = String(t).split(":");
+      const hh = parseInt(parts[0] || "0", 10);
+      const mm = parts[1] || "00";
+      const ampm = hh >= 12 ? "PM" : "AM";
+      const h12 = ((hh + 11) % 12) + 1;
+      return `${h12}:${mm} ${ampm}`;
+    }
 
-      const { data, error } = await sb
-        .from("business_hours")
-        .select("day_of_week,is_open,open_time,close_time")
-        .eq("business_id", businessId)
-        .order("day_of_week", { ascending: true });
+    function nsDayLabel(d){
+      const x = String(d || "").toLowerCase();
+      return x ? x.charAt(0).toUpperCase() + x.slice(1) : "";
+    }
 
-      if (error || !data || !data.length) {
-        container.innerHTML = `<div style="color:rgba(255,255,255,0.4);">Hours not available</div>`;
+    function renderHoursFromRows(rows){
+      const el = document.getElementById("hours_list");
+      if (!el || !rows || !rows.length) {
+        if (el) el.innerHTML = `<div style="color:rgba(255,255,255,0.4)">Hours not available</div>`;
         return;
       }
 
-      const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-      container.innerHTML = "";
+      const sorted = [...rows].sort((a,b) => nsDayOrder(a.day_of_week) - nsDayOrder(b.day_of_week));
 
-      data.forEach(row => {
-        // ✅ PATCH: Convert 1–7 (Mon-Sun) to 0-6 (Sun-Sat) index
-        const idx = row.day_of_week % 7;
-        const dayName = days[idx];
-        const isClosed = !row.is_open;
+      el.innerHTML = sorted.map(r => {
+        const day = nsDayLabel(r.day_of_week);
+        const closed = !!r.is_closed || !r.open_time || !r.close_time;
+        const time = closed ? "Closed" : `${nsFmtTime(r.open_time)} - ${nsFmtTime(r.close_time)}`;
 
-        const openDisplay = formatTime(row.open_time);
-        const closeDisplay = formatTime(row.close_time);
-
-        const timeHTML = isClosed
-          ? `<span style="color:var(--accent); font-weight:700;">Closed</span>`
-          : `<span>${openDisplay} - ${closeDisplay}</span>`;
-
-        container.insertAdjacentHTML("beforeend", `
+        return `
           <div class="hour-row">
-            <span style="color:${isClosed ? "var(--accent)" : "var(--text-muted)"}">
-              ${dayName}
+            <span style="color:${closed ? "var(--accent)" : "var(--text-muted)"}">
+              ${day}
             </span>
-            ${timeHTML}
+            <span ${closed ? `style="color:var(--accent); font-weight:700"` : ""}>
+              ${time}
+            </span>
           </div>
-        `);
-      });
+        `;
+      }).join("");
     }
 
-    // ✅ PATCH: Modern IIFE Loader
+    async function loadHours(businessId){
+      // ✅ Using verified column names from your DB (is_closed instead of is_open)
+      const { data, error } = await sb
+        .from("business_hours")
+        .select("day_of_week, open_time, close_time, is_closed")
+        .eq("business_id", businessId);
+
+      return (error) ? null : data;
+    }
+
     (async () => {
       try {
-        if (!window.NS.BUSINESS_SLUG) {
-           console.warn("No business slug found.");
+        if (!NS.BUSINESS_SLUG) {
+           console.warn("No slug found");
            return;
         }
 
-        const sb = supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
-        const { data, error } = await sb
+        const { data: biz, error } = await sb
           .from("business")
           .select("id")
-          .eq("slug", window.NS.BUSINESS_SLUG)
+          .eq("slug", NS.BUSINESS_SLUG)
           .maybeSingle();
 
-        if (error || !data?.id) return;
+        if (error || !biz?.id) return;
 
-        document.getElementById("nsdBusiness")?.setAttribute("data-business-id", data.id);
-        document.body.dataset.businessId = data.id;
+        document.getElementById("nsdBusiness")?.setAttribute("data-business-id", biz.id);
+        document.body.dataset.businessId = biz.id;
 
-        await loadBusinessHours(sb, data.id);
+        const hours = await loadHours(biz.id);
+        renderHoursFromRows(hours || []);
 
       } catch (e) {
-        console.error("Supabase Injection Error:", e);
+        console.error("Hours load failed:", e);
       }
     })();
   </script>
