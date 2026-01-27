@@ -182,19 +182,18 @@
             allowfullscreen="" 
             width="100%" 
             height="100%" 
-            src="http://googleusercontent.com/maps.google.com/3">
+            referrerpolicy="no-referrer-when-downgrade"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3195.686262423773!2d-76.28974662369666!3d36.77815897225143!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89ba98661609805f%3A0x5e2365265445229c!2s3904%20Bainbridge%20Blvd%2C%20Chesapeake%2C%20VA%2023324!5e0!3m2!1sen!2sus!4v1706630000000!5m2!1sen!2sus">
           </iframe>
         </div>
 
         <div class="hours-card">
           <h3 style="font-size:16px; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:20px; color:white;">Shop Hours</h3>
-          <div class="hour-row"><span style="color:var(--text-muted)">Monday</span><span>9:00 AM - 7:00 PM</span></div>
-          <div class="hour-row"><span style="color:var(--text-muted)">Tuesday</span><span>9:00 AM - 7:00 PM</span></div>
-          <div class="hour-row"><span style="color:var(--text-muted)">Wednesday</span><span>9:00 AM - 7:00 PM</span></div>
-          <div class="hour-row"><span style="color:var(--text-muted)">Thursday</span><span>9:00 AM - 7:00 PM</span></div>
-          <div class="hour-row"><span style="color:var(--text-muted)">Friday</span><span>9:00 AM - 7:00 PM</span></div>
-          <div class="hour-row"><span style="color:var(--text-muted)">Saturday</span><span>9:00 AM - 7:00 PM</span></div>
-          <div class="hour-row"><span style="color:var(--accent); font-weight:700;">Sunday</span><span style="color:var(--accent); font-weight:700;">Closed</span></div>
+          
+          <div id="hoursContainer">
+            <div style="color:var(--text-muted); font-size:13px;">Loading hours...</div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -215,7 +214,6 @@
       nav.classList.toggle('open');
     }
 
-    // ✅ PATCH: Removed showMsg(), kept booking stubs
     window.openBooking = window.openBooking || function () { console.warn("Booking script not yet loaded."); };
     window.closeBooking = window.closeBooking || function () { console.warn("Booking script not yet loaded."); };
   </script>
@@ -227,6 +225,58 @@
       SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
       BUSINESS_SLUG: "net-studio-barbershop"
     };
+
+    // ✅ PATCH: Format Time Utility (14:00:00 -> 2:00 PM)
+    function formatTime(timeStr) {
+      if (!timeStr) return "";
+      // handle "14:00:00" or "14:00"
+      const [h, m] = timeStr.split(":");
+      const hours = parseInt(h);
+      const suffix = hours >= 12 ? "PM" : "AM";
+      const displayHour = ((hours + 11) % 12 + 1);
+      return `${displayHour}:${m} ${suffix}`;
+    }
+
+    // ✅ PATCH: Fetch and Render Hours
+    async function loadBusinessHours(sb, businessId) {
+      const { data, error } = await sb
+        .from("business_hours")
+        .select("*")
+        .eq("business_id", businessId)
+        .order("day_of_week", { ascending: true });
+
+      if (error || !data?.length) {
+         // Fallback if empty
+         document.getElementById("hoursContainer").innerHTML = `<div style="color:rgba(255,255,255,0.4);">Hours not available</div>`;
+         return;
+      }
+
+      const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+      const container = document.getElementById("hoursContainer");
+      container.innerHTML = "";
+
+      data.forEach(row => {
+        const dayName = days[row.day_of_week];
+        const isClosed = !row.is_open;
+        
+        // Clean up time display
+        const openDisplay = formatTime(row.open_time);
+        const closeDisplay = formatTime(row.close_time);
+        
+        const timeHTML = isClosed
+          ? `<span style="color:var(--accent); font-weight:700;">Closed</span>`
+          : `<span>${openDisplay} - ${closeDisplay}</span>`;
+
+        container.insertAdjacentHTML("beforeend", `
+          <div class="hour-row">
+            <span style="color:${isClosed ? "var(--accent)" : "var(--text-muted)"}">
+              ${dayName}
+            </span>
+            ${timeHTML}
+          </div>
+        `);
+      });
+    }
 
     (async () => {
       try {
@@ -241,6 +291,10 @@
 
         document.getElementById("nsdBusiness")?.setAttribute("data-business-id", data.id);
         document.body.dataset.businessId = data.id;
+
+        // ✅ PATCH: Trigger Hours Load
+        await loadBusinessHours(sb, data.id);
+
       } catch (e) {
         console.error("Supabase Injection Error:", e);
       }
