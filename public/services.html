@@ -133,9 +133,9 @@
       <div class="logo">THE <span>DEN</span></div>
       
       <nav class="nav-links">
-        <a data-ns-path="/index.html?home">Home</a>
-        <a data-ns-path="/about.html">About</a>
-        <a data-ns-path="/services.html" class="active">Services</a>
+        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
+        <a href="services.html" class="active">Services</a>
       </nav>
 
       <a href="#" onclick="openBooking(); return false;" class="btn">Book Now</a>
@@ -181,36 +181,50 @@
     window.closeBooking = window.closeBooking || function() {};
 
     // =====================================
-    // NAV LINK PERSISTENCE
+    // URL NORMALIZER (Self-Healing)
     // =====================================
-    (function keepBusinessQueryOnLinks(){
-      const qs = location.search || ""; 
-      document.querySelectorAll("a[data-ns-path]").forEach(a => {
-        const raw = a.getAttribute("data-ns-path") || "/";
-        const [path, hash] = raw.split("?");
-        const finalHash = hash ? "#" + hash : "";
-        a.href = path + qs + finalHash;
-      });
+    (function normalizeBParam(){
+      const s = location.search || "";
+      if (/\?b=/.test(s)) return; 
+
+      const m = s.match(/^\?b(?:=|\+)?([^&]+)/i);
+      if (!m || !m[1]) return;
+
+      const slug = decodeURIComponent(m[1]);
+      const u = new URL(location.href);
+      u.search = `?b=${encodeURIComponent(slug)}`;
+      history.replaceState({}, "", u.toString());
     })();
   </script>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     // =====================================
-    // SUPABASE + BUSINESS BOOTSTRAP
+    // BULLETPROOF SLUG RESOLUTION
     // =====================================
-
     function nsGetSlugFromHost() {
-      const qp = new URLSearchParams(location.search).get("b");
-      if (qp) return qp.toLowerCase();
+      const s = location.search || "";
 
+      // 1. Normal case: ?b=slug
+      const p = new URLSearchParams(s);
+      const ok = p.get("b");
+      if (ok) return ok.toLowerCase();
+
+      // 2. Malformed: ?bslug OR ?b+slug
+      const m = s.match(/^\?b(?:=|\+)?([^&]+)/i);
+      if (m && m[1]) return decodeURIComponent(m[1]).toLowerCase();
+
+      // 3. Last fallback: host check
       const host = location.hostname.toLowerCase();
       if (host.endsWith(".netstudio.app")) return host.split(".")[0];
 
-      console.warn("NS: No slug found in URL. Add ?b=your-slug");
-      return null; 
+      console.warn("NS: No slug found in URL.");
+      return null;
     }
 
+    // =====================================
+    // SUPABASE BOOTSTRAP
+    // =====================================
     window.NS = {
       ...(window.NS || {}),
       SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
@@ -242,67 +256,59 @@
       }
 
       window.BUSINESS_ID = data.id;
-      document.body.dataset.businessId = data.id;
       return data.id;
     }
 
-    // =====================================
-    // SERVICES RENDER ENGINE (menu_items)
-    // =====================================
-
     async function loadMenuItems() {
-      const businessId = window.BUSINESS_ID;
-      if (!businessId) return;
+      if (!window.BUSINESS_ID) return;
 
       const { data: items, error } = await sb
         .from("menu_items")
         .select("*")
-        .eq("business_id", businessId)
+        .eq("business_id", window.BUSINESS_ID)
         .eq("is_active", true)
         .order("display_order", { ascending: true });
 
       if (error) {
-        console.error("Error loading menu items:", error);
+        console.error("Error loading items:", error);
         return;
       }
-
       renderMenuItems(items || []);
     }
 
     function renderMenuItems(items) {
       const mount = document.getElementById("servicesMount");
       if (!mount) return;
-
       mount.innerHTML = "";
 
       if (!items.length) {
-        mount.innerHTML = `<div style="text-align:center; color: var(--text-muted); padding: 40px 0;">No services available right now.</div>`;
+        mount.innerHTML = `<div style="text-align:center; color: var(--text-muted); padding: 40px 0;">No services found.</div>`;
         return;
       }
 
       const groups = {};
-      items.forEach(item => {
-        const cat = (item.category || "Other").trim();
-        (groups[cat] ||= []).push(item);
+      items.forEach(i => {
+        const cat = (i.category || "Other").trim();
+        (groups[cat] ||= []).push(i);
       });
 
-      Object.entries(groups).forEach(([category, services]) => {
+      Object.entries(groups).forEach(([cat, svcs]) => {
         const catBlock = document.createElement("div");
         catBlock.className = "service-category";
-        catBlock.innerHTML = `<div class="cat-title">${category}</div>`;
+        catBlock.innerHTML = `<div class="cat-title">${cat}</div>`;
 
-        services.forEach(service => {
-          const price = service.price_cents != null ? `$${(service.price_cents / 100).toFixed(2)}` : (service.price != null ? `$${Number(service.price).toFixed(2)}` : "");
+        svcs.forEach(s => {
+          const p = s.price_cents ? `$${(s.price_cents/100).toFixed(2)}` : (s.price ? `$${Number(s.price).toFixed(2)}` : "");
           const row = document.createElement("div");
           row.className = "service-item";
           row.innerHTML = `
             <div>
-              <div class="svc-name">${service.name}</div>
-              ${service.description ? `<div class="svc-desc">${service.description}</div>` : ``}
+              <div class="svc-name">${s.name}</div>
+              ${s.description ? `<div class="svc-desc">${s.description}</div>` : ""}
             </div>
             <div class="svc-right">
-              <div class="svc-price">${price}</div>
-              <button class="btn" onclick="openBooking('${service.id}'); return false;">Book</button>
+              <div class="svc-price">${p}</div>
+              <button class="btn" onclick="openBooking('${s.id}')">Book</button>
             </div>
           `;
           catBlock.appendChild(row);
@@ -318,6 +324,5 @@
   </script>
 
   <script src="/assets/js/netstudio_booking.js"></script>
-
 </body>
 </html>
