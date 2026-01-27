@@ -157,15 +157,9 @@
         </div>
 
         <div style="display:flex; flex-direction:column; gap:14px; margin-top:10px;">
-          <a href="tel:7575432966" class="btn" style="width:100%">
-            Call The Shop
-          </a>
-          <a href="sms:+17575432966" class="btn btn-outline" style="width:100%">
-            Text Us
-          </a>
-          <button type="button" class="btn btn-outline" onclick="openBooking(); return false;" style="width:100%">
-            Book An Appointment
-          </button>
+          <a href="tel:7575432966" class="btn" style="width:100%">Call The Shop</a>
+          <a href="sms:+17575432966" class="btn btn-outline" style="width:100%">Text Us</a>
+          <button type="button" class="btn btn-outline" onclick="openBooking(); return false;" style="width:100%">Book An Appointment</button>
           <p style="color:var(--text-muted); font-size:12px; text-align:center; margin-top:10px;">
             Fastest response is call or text. Walk-ins welcome.
           </p>
@@ -183,17 +177,15 @@
             width="100%" 
             height="100%" 
             referrerpolicy="no-referrer-when-downgrade"
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3195.404561021464!2d-76.28919632367566!3d36.78453486851628!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89ba980f7a0a0a0d%3A0x1234567890abcdef!2s3904%20Bainbridge%20Blvd%2C%20Chesapeake%2C%20VA%2023324!5e0!3m2!1sen!2sus!4v1700000000000!5m2!1sen!2sus">
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3195.686262423773!2d-76.28974662369666!3d36.77815897225143!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89ba98661609805f%3A0x5e2365265445229c!2s3904%20Bainbridge%20Blvd%2C%20Chesapeake%2C%20VA%2023324!5e0!3m2!1sen!2sus!4v1706630000000!5m2!1sen!2sus">
           </iframe>
         </div>
 
         <div class="hours-card">
           <h3 style="font-size:16px; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:20px; color:white;">Shop Hours</h3>
-          
           <div id="hoursContainer">
             <div style="color:var(--text-muted); font-size:13px;">Loading hours...</div>
           </div>
-
         </div>
       </div>
     </div>
@@ -220,7 +212,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /* --- CONFIG + SLUG DETECTION --- */
+    // ✅ PATCH: Dynamic Slug
     function nsGetSlugFromHost() {
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return qp.toLowerCase();
@@ -235,7 +227,6 @@
       BUSINESS_SLUG: nsGetSlugFromHost()
     };
 
-    /* --- HELPERS --- */
     function formatTime(timeStr) {
       if (!timeStr) return "";
       const parts = String(timeStr).split(":");
@@ -246,7 +237,7 @@
       return `${displayHour}:${m} ${suffix}`;
     }
 
-    /* --- FETCH HOURS --- */
+    // ✅ PATCH: Fetch and Render Hours (handles 0-6 OR 1-7 day_of_week)
     async function loadBusinessHours(sb, businessId) {
       const container = document.getElementById("hoursContainer");
       if (!container) return;
@@ -257,45 +248,18 @@
         .eq("business_id", businessId)
         .order("day_of_week", { ascending: true });
 
-      if (error) {
-        console.warn("business_hours error:", error);
+      if (error || !data || !data.length) {
         container.innerHTML = `<div style="color:rgba(255,255,255,0.4);">Hours not available</div>`;
         return;
       }
-
-      if (!data || !data.length) {
-        container.innerHTML = `<div style="color:rgba(255,255,255,0.4);">Hours not available</div>`;
-        return;
-      }
-
-      // If your table stores 1-7 (Mon-Sun), normalize to 0-6 (Sun-Sat)
-      const looksLikeOneToSeven = data.some(r => Number(r.day_of_week) === 7) || data.every(r => Number(r.day_of_week) >= 1);
-      const norm = (d) => {
-        const n = Number(d);
-        if (Number.isNaN(n)) return 0;
-        if (!looksLikeOneToSeven) return n; // already 0-6
-        return n % 7; // 7->0, 1->1, 2->2 ...
-      };
 
       const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
       container.innerHTML = "";
 
-      // Sort carefully using normalized day index to ensure Sun->Sat order visually
-      // Or just trust the API order if standard. We'll iterate data directly but label correctly.
-      // Better approach: Create a map of normalized_day -> config, then loop 0..6
-      const map = {};
-      data.forEach(r => { map[norm(r.day_of_week)] = r; });
-
-      // Render 0 (Sunday) to 6 (Saturday) or however you prefer. 
-      // Most US businesses list Mon-Fri first, then Sat/Sun. Let's do Standard Week (Sun-Sat) or Mon-Sun.
-      // Let's stick to the data order but label correctly.
-      
-      // Re-sort data by normalized day to ensure Sunday(0) is first or mapped correctly
-      const sortedData = [...data].sort((a,b) => norm(a.day_of_week) - norm(b.day_of_week));
-
-      sortedData.forEach(row => {
-        const dayIndex = norm(row.day_of_week);
-        const dayName = days[dayIndex] || "";
+      data.forEach(row => {
+        // ✅ PATCH: Convert 1–7 (Mon-Sun) to 0-6 (Sun-Sat) index
+        const idx = row.day_of_week % 7;
+        const dayName = days[idx];
         const isClosed = !row.is_open;
 
         const openDisplay = formatTime(row.open_time);
@@ -316,7 +280,7 @@
       });
     }
 
-    /* --- INIT --- */
+    // ✅ PATCH: Modern IIFE Loader
     (async () => {
       try {
         if (!window.NS.BUSINESS_SLUG) {
@@ -336,7 +300,6 @@
         document.getElementById("nsdBusiness")?.setAttribute("data-business-id", data.id);
         document.body.dataset.businessId = data.id;
 
-        // Load Hours
         await loadBusinessHours(sb, data.id);
 
       } catch (e) {
