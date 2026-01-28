@@ -319,7 +319,11 @@
         const ctaN  = home.primary_cta || {};
 
         const name = pick(c.name, home.name);
+        
+        // ✅ PATCHED BLOCK START
         if (name) {
+          document.title = `${name} — Net Studio Template`;
+
           const names = String(name).trim().split(/\s+/);
           const logoHTML = names.length > 1 ? `${names[0]} <span>${names.slice(1).join(" ")}</span>` : names[0];
           if ($("header_logo")) $("header_logo").innerHTML = logoHTML;
@@ -327,6 +331,7 @@
           if ($("copyright_name")) $("copyright_name").textContent = name;
           if ($("visit_name")) $("visit_name").textContent = name;
         }
+        // ✅ PATCHED BLOCK END
 
         const hero = document.querySelector(".hero");
         const heroBg = pick(c.hero_bg, heroN.bg);
