@@ -136,7 +136,7 @@
         <a class="nav-link" href="index.html" data-page="index.html">Home</a>
         <a class="nav-link" href="about.html" data-page="about.html">About</a>
         <a class="nav-link" href="services.html" data-page="services.html">Services</a>
-        <a class="nav-link active" href="den_team.html" data-page="den_team.html">Team</a>
+        <a class="nav-link" href="team.html" data-page="team.html">Team</a>
       </nav>
 
       <a href="#" class="btn" onclick="openBooking(); return false;" style="padding: 8px 16px; font-size: 11px;">Book Now</a>
@@ -169,7 +169,7 @@
   <footer>
     <div class="container">
       <div style="font-weight:900; font-size:24px; margin-bottom:20px; text-transform:uppercase; font-style:italic;">THE <span style="color:var(--accent)">DEN</span></div>
-      <p>© 2025 The Den Barbershop. Powered by Net Studio.</p>
+      <p>© 2026 The Den Barbershop. Powered by Net Studio.</p>
     </div>
   </footer>
 
@@ -177,41 +177,81 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const SUPABASE_URL = "https://jdvdgvolfmvlgyfklbwe.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek";
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    /* --- NAV REWRITER --- */
+    /* --- NAV REWRITER (WORKER READY) --- */
     function nsGetSlugFromHost() {
+      // 1) Preview / Pages / local fallback: ?b=slug
       const qp = new URLSearchParams(location.search).get("b");
-      if (qp) return qp.toLowerCase();
-      const host = location.hostname.toLowerCase();
-      if (host.endsWith(".netstudio.app")) return host.split(".")[0];
+      if (qp) return String(qp).trim().toLowerCase();
+
+      // 2) Production: slug.netstudiodevelopment.com
+      const host = (location.hostname || "").toLowerCase();
+
+      // Ignore obvious non-slug hosts
+      if (!host || host === "localhost" || host.startsWith("127.")) return null;
+
+      // If we're on the main domain, no slug
+      const ROOT = "netstudiodevelopment.com";
+      if (host === ROOT || host === "www." + ROOT) return null;
+
+      // If it's a subdomain of ROOT, first label is the slug
+      if (host.endsWith("." + ROOT)) {
+        const slug = host.slice(0, -(ROOT.length + 1)).split(".")[0];
+        return slug || null;
+      }
+
+      // Otherwise unknown host: no slug
       return null;
     }
 
-    const BUSINESS_SLUG = nsGetSlugFromHost();
+    function nsShouldUseQuerySlug() {
+      const host = (location.hostname || "").toLowerCase();
+      return (
+        host.endsWith(".pages.dev") ||
+        host.endsWith(".workers.dev") ||
+        host === "localhost" ||
+        host.startsWith("127.")
+      );
+    }
 
     function nsLinkWithSlug(targetPath) {
-      if (!BUSINESS_SLUG) return targetPath;
-      const host = location.hostname.toLowerCase();
-      if (host.endsWith(".netstudio.app") && host.split(".")[0] === BUSINESS_SLUG) return targetPath;
+      // ✅ PATCH: Reuse calculated slug (Fix #2)
+      const slug = window.NS?.BUSINESS_SLUG || nsGetSlugFromHost();
+      if (!slug) return targetPath;
+
+      // Production: clean paths, no ?b=
+      if (!nsShouldUseQuerySlug()) return targetPath;
+
+      // Preview: keep ?b=slug
       const u = new URL(targetPath, location.href);
-      u.searchParams.set("b", BUSINESS_SLUG);
+      u.searchParams.set("b", slug);
       return u.pathname + "?" + u.searchParams.toString() + u.hash;
     }
 
     function nsWireHeaderNav() {
       const logo = document.getElementById("header_logo");
       if (logo) logo.setAttribute("href", nsLinkWithSlug("index.html"));
+
       document.querySelectorAll("a.nav-link[data-page]").forEach(a => {
-        const page = a.getAttribute("data-page") || "index.html";
+        const page = a.getAttribute("data-page") || a.getAttribute("href") || "index.html";
         a.setAttribute("href", nsLinkWithSlug(page));
+
         const current = (location.pathname.split("/").pop() || "index.html").toLowerCase();
         if (page.toLowerCase() === current) a.classList.add("active");
         else a.classList.remove("active");
       });
     }
+
+    /* --- INIT CONFIG --- */
+    window.NS = {
+      SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
+      BUSINESS_SLUG: nsGetSlugFromHost(),
+      TEMPLATE_KEY: "den_v1"
+    };
+
+    // Initialize Supabase & Slug reference
+    const sb = supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
+    const BUSINESS_SLUG = window.NS.BUSINESS_SLUG; // Maintain ref for existing code logic
 
     /* --- CREW RENDERER --- */
     function renderCrew(members, profileMap) {
@@ -233,10 +273,7 @@
         const role = (m.role || "Barber");
         const bio  = (m.bio || "Professional barber at The Den.");
 
-        // ✅ image priority:
-        // 1) gallery_image (is_profile=true)
-        // 2) team_members.photo_url
-        // 3) fallback
+        // ✅ image priority: gallery_image > team_members.photo_url > fallback
         const img =
           (id && profileMap.get(id)) ||
           m.photo_url ||
@@ -261,7 +298,16 @@
     }
 
     async function loadCrew() {
-      if (!BUSINESS_SLUG) return;
+      // ✅ Fixed: Stuck loading state
+      if (!BUSINESS_SLUG) {
+        const grid = document.getElementById("crew_grid");
+        if(grid) {
+          grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:rgba(255,255,255,.6);padding:40px 0;">
+            Business not found.
+          </div>`;
+        }
+        return;
+      }
 
       // 1) business id
       const { data: biz, error: bErr } = await sb
@@ -271,7 +317,11 @@
         .eq("slug", BUSINESS_SLUG)
         .maybeSingle();
 
-      if (bErr || !biz?.id) return;
+      if (bErr || !biz?.id) {
+        const grid = document.getElementById("crew_grid");
+        if(grid) grid.innerHTML = `<div style="text-align:center;color:rgba(255,255,255,.4);">Unable to load business.</div>`;
+        return;
+      }
 
       // 2) ONLY auth-linked members
       const { data: members, error: mErr } = await sb
@@ -279,7 +329,7 @@
         .from("team_members")
         .select("id, name, role, bio, photo_url, auth_user_id, created_at")
         .eq("business_id", biz.id)
-        .not("auth_user_id", "is", null)      // ✅ ONLY real users
+        .not("auth_user_id", "is", null)
         .order("created_at", { ascending: true });
 
       if (mErr) {
@@ -318,7 +368,6 @@
       renderCrew(list, profileMap);
     }
 
-    // ✅ PATCH: Content Loader for Team Hero
     async function loadTeamHeroCopy() {
       if (!BUSINESS_SLUG) return;
 
@@ -355,16 +404,20 @@
       if (elT && text) elT.textContent = text;
     }
 
+    // ✅ PATCH: Resilient Booking Wrapper (Fix #3)
     window.openBookingWithStaff = function(staffId) {
       if (!window.openBooking) return;
-      window.openBooking({ staff_id: staffId });
+      try {
+        // Preferred: object API (Modern)
+        window.openBooking({ staff_id: staffId });
+      } catch(e) {
+        // Fallback: string API (Legacy)
+        window.openBooking(staffId);
+      }
     };
     
-    // ✅ DEBUG LOGGER
-    console.log("DEN_TEAM BUILD ✅ v999", Date.now());
-
     nsWireHeaderNav();
-    loadTeamHeroCopy(); // ✅ Call the content loader
+    loadTeamHeroCopy();
     loadCrew();
 
     if (window.lucide) lucide.createIcons();
