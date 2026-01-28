@@ -225,20 +225,52 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /* --- NAV REWRITER --- */
+    /* --- NAV REWRITER (WORKER READY) --- */
     function nsGetSlugFromHost() {
+      // 1) Preview / Pages / local fallback: ?b=slug
       const qp = new URLSearchParams(location.search).get("b");
-      if (qp) return qp.toLowerCase();
-      const host = location.hostname.toLowerCase();
-      if (host.endsWith(".netstudio.app")) return host.split(".")[0];
+      if (qp) return String(qp).trim().toLowerCase();
+
+      // 2) Production: slug.netstudiodevelopment.com
+      const host = (location.hostname || "").toLowerCase();
+
+      // Ignore obvious non-slug hosts
+      if (!host || host === "localhost" || host.startsWith("127.")) return null;
+
+      // If we're on the main domain, no slug
+      // (example: netstudiodevelopment.com)
+      const ROOT = "netstudiodevelopment.com";
+      if (host === ROOT || host === "www." + ROOT) return null;
+
+      // If it's a subdomain of ROOT, first label is the slug
+      if (host.endsWith("." + ROOT)) {
+        const slug = host.slice(0, -(ROOT.length + 1)).split(".")[0];
+        return slug || null;
+      }
+
+      // Otherwise unknown host: no slug
       return null;
+    }
+
+    function nsShouldUseQuerySlug() {
+      const host = (location.hostname || "").toLowerCase();
+      return (
+        host.endsWith(".pages.dev") ||
+        host.endsWith(".workers.dev") ||
+        host === "localhost" ||
+        host.startsWith("127.")
+      );
     }
 
     function nsLinkWithSlug(targetPath) {
       const slug = nsGetSlugFromHost();
       if (!slug) return targetPath;
-      const host = location.hostname.toLowerCase();
-      if (host.endsWith(".netstudio.app") && host.split(".")[0] === slug) return targetPath;
+
+      // On production (slug.netstudiodevelopment.com) we want CLEAN paths:
+      // /about.html, /services.html, etc. No ?b=
+      if (!nsShouldUseQuerySlug()) return targetPath;
+
+      // On preview (pages.dev), append ?b=slug
       const u = new URL(targetPath, location.href);
       u.searchParams.set("b", slug);
       return u.pathname + "?" + u.searchParams.toString() + u.hash;
@@ -361,6 +393,11 @@
       }
 
       async function init() {
+        if (!NS.BUSINESS_SLUG) {
+          document.getElementById("site-error").style.display = "block";
+          return;
+        }
+
         const { data: biz, error } = await sb.from("business").select("id").eq("slug", NS.BUSINESS_SLUG).maybeSingle();
         if (error || !biz) { document.getElementById("site-error").style.display = "block"; return; }
         document.body.dataset.businessId = biz.id;
