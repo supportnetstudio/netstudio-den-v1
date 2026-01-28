@@ -214,7 +214,6 @@
     }
 
     function nsLinkWithSlug(targetPath) {
-      // ✅ PATCH: Reuse calculated slug (Fix #2)
       const slug = window.NS?.BUSINESS_SLUG || nsGetSlugFromHost();
       if (!slug) return targetPath;
 
@@ -251,7 +250,7 @@
 
     // Initialize Supabase & Slug reference
     const sb = supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
-    const BUSINESS_SLUG = window.NS.BUSINESS_SLUG; // Maintain ref for existing code logic
+    const BUSINESS_SLUG = window.NS.BUSINESS_SLUG;
 
     /* --- CREW RENDERER --- */
     function renderCrew(members, profileMap) {
@@ -273,7 +272,6 @@
         const role = (m.role || "Barber");
         const bio  = (m.bio || "Professional barber at The Den.");
 
-        // ✅ image priority: gallery_image > team_members.photo_url > fallback
         const img =
           (id && profileMap.get(id)) ||
           m.photo_url ||
@@ -298,7 +296,6 @@
     }
 
     async function loadCrew() {
-      // ✅ Fixed: Stuck loading state
       if (!BUSINESS_SLUG) {
         const grid = document.getElementById("crew_grid");
         if(grid) {
@@ -309,7 +306,6 @@
         return;
       }
 
-      // 1) business id
       const { data: biz, error: bErr } = await sb
         .schema("public")
         .from("business")
@@ -323,7 +319,6 @@
         return;
       }
 
-      // 2) ONLY auth-linked members
       const { data: members, error: mErr } = await sb
         .schema("public")
         .from("team_members")
@@ -340,7 +335,6 @@
       const list = members || [];
       const ids = list.map(x => String(x.id || "").trim()).filter(Boolean);
 
-      // 3) Pull profile images from gallery_image (is_profile = true)
       const profileMap = new Map();
 
       if (ids.length) {
@@ -356,7 +350,6 @@
         if (pErr) {
           console.warn("gallery_image profile error:", pErr);
         } else {
-          // newest per team_member_id wins
           (pics || []).forEach(r => {
             const tm = String(r.team_member_id || "").trim();
             if (!tm) return;
@@ -404,16 +397,10 @@
       if (elT && text) elT.textContent = text;
     }
 
-    // ✅ PATCH: Resilient Booking Wrapper (Fix #3)
+    // ✅ Booking (Modern object API only)
     window.openBookingWithStaff = function(staffId) {
-      if (!window.openBooking) return;
-      try {
-        // Preferred: object API (Modern)
-        window.openBooking({ staff_id: staffId });
-      } catch(e) {
-        // Fallback: string API (Legacy)
-        window.openBooking(staffId);
-      }
+      if (typeof window.openBooking !== "function") return;
+      window.openBooking({ staff_id: staffId });
     };
     
     nsWireHeaderNav();
