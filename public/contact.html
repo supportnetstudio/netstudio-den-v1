@@ -112,19 +112,19 @@
 
   <header>
     <div class="container nav-wrap">
-      <a href="index.html" class="logo" id="header_logo">THE <span>DEN</span></a>
+      <a href="/" class="logo" id="header_logo">THE <span>DEN</span></a>
       
       <div class="mobile-toggle" onclick="toggleMenu()">
         <i data-lucide="menu"></i>
       </div>
 
       <nav class="nav-links" id="navLinks">
-        <a class="nav-link" href="index.html" data-page="index.html">Home</a>
-        <a class="nav-link" href="about.html" data-page="about.html">About</a>
-        <a class="nav-link" href="services.html" data-page="services.html">Services</a>
-        <a class="nav-link" href="gallery.html" data-page="gallery.html">Gallery</a>
-        <a class="nav-link" href="team.html" data-page="team.html">Team</a>
-        <a class="nav-link active" href="contact.html" data-page="contact.html">Contact</a>
+        <a class="nav-link" href="/" data-page="home">Home</a>
+        <a class="nav-link" href="/about" data-page="about">About</a>
+        <a class="nav-link" href="/services" data-page="services">Services</a>
+        <a class="nav-link" href="/gallery" data-page="gallery">Gallery</a>
+        <a class="nav-link" href="/team" data-page="team">Team</a>
+        <a class="nav-link active" href="/contact" data-page="contact">Contact</a>
       </nav>
       
       <a href="javascript:void(0)" class="btn header-btn" onclick="openBooking(); return false;">Book Now</a>
@@ -219,7 +219,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
-    /* --- CONFIG + SLUG DETECTION (Worker-Ready + Legacy Support) --- */
+    /* --- CONFIG + SLUG DETECTION (Worker-Ready) --- */
     function nsGetSlugFromHost() {
       // 1) Preview / Pages / local fallback: ?b=slug
       const qp = new URLSearchParams(location.search).get("b");
@@ -230,10 +230,7 @@
 
       if (!host || host === "localhost" || host.startsWith("127.")) return null;
 
-      // ✅ Legacy Support (Fix #1)
-      if (host.endsWith(".netstudio.app")) {
-        return host.split(".")[0] || null;
-      }
+      // ✅ REMOVED: Legacy .netstudio.app block (Step 2)
 
       const ROOT = "netstudiodevelopment.com";
       if (host === ROOT || host === "www." + ROOT) return null;
@@ -278,17 +275,27 @@
       return u.pathname + "?" + u.searchParams.toString() + u.hash;
     }
 
+    // ✅ Fixed: Correct Clean URL Logic
     function nsWireHeaderNav() {
       const logo = document.getElementById("header_logo");
-      if (logo) logo.setAttribute("href", nsLinkWithSlug("index.html"));
+      if (logo) logo.setAttribute("href", nsLinkWithSlug("/"));
 
       document.querySelectorAll("a.nav-link[data-page]").forEach(a => {
-        const page = a.getAttribute("data-page") || "index.html";
-        a.setAttribute("href", nsLinkWithSlug(page));
-        
-        // Active state
-        const current = (location.pathname.split("/").pop() || "index.html").toLowerCase();
-        if (page.toLowerCase() === current) a.classList.add("active");
+        const page = (a.getAttribute("data-page") || "home").toLowerCase();
+
+        // map page key -> route
+        const path =
+          page === "home" ? "/" :
+          page.startsWith("/") ? page :
+          "/" + page;
+
+        a.setAttribute("href", nsLinkWithSlug(path));
+
+        // Active state: compare route keys, not filenames
+        const current = (location.pathname || "/").replace(/\/+$/, "") || "/";
+        const isHome = current === "/";
+        const isActive = (page === "home" && isHome) || (page !== "home" && current === path);
+        if (isActive) a.classList.add("active");
         else a.classList.remove("active");
       });
     }
@@ -320,24 +327,17 @@
       }
 
       if (phonePretty) {
-        // Strip non-digits for href
         const tel = String(phonePretty).replace(/[^\d]/g, "");
-        
-        // Update main contact display
         if ($("contact_phone_text")) $("contact_phone_text").textContent = phonePretty;
         if ($("contact_phone_link") && tel) $("contact_phone_link").setAttribute("href", `tel:${tel}`);
-
-        // Update Action Buttons
         if ($("action_call_btn") && tel) $("action_call_btn").setAttribute("href", `tel:${tel}`);
         
-        // ✅ Fixed: Robust SMS Link Logic (Fix #2)
         if ($("action_text_btn") && tel) {
           const smsPrefix = (tel.length === 11 && tel.startsWith("1")) ? "+" : "+1";
           $("action_text_btn").setAttribute("href", `sms:${smsPrefix}${tel}`); 
         }
       }
 
-      // ✅ Fixed: Map Injection Logic
       const mapQ = pick(c.map_q, content.map_q, ""); 
       if (mapQ && $("contact_map_frame")) {
         $("contact_map_frame").src = `https://maps.google.com/maps?q=${encodeURIComponent(mapQ)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
@@ -402,7 +402,6 @@
            return;
         }
 
-        // ✅ Fixed: Supabase Guard (Fix #3)
         if (typeof window.supabase === "undefined" || !window.supabase.createClient) {
           console.error("Supabase CDN failed to load.");
           return;
