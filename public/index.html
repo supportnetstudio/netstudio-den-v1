@@ -137,14 +137,14 @@
   <div id="main-content" style="opacity: 0; transition: opacity 0.5s ease;">
       <header>
         <div class="container nav-wrap">
-          <a href="index.html" class="logo" id="header_logo">THE <span>DEN</span></a>
+          <a href="/" class="logo" id="header_logo">THE <span>DEN</span></a>
           <nav class="nav-links" aria-label="Primary">
-            <a class="nav-link" href="index.html" data-page="index.html">Home</a>
-            <a class="nav-link" href="about.html" data-page="about.html">About</a>
-            <a class="nav-link" href="services.html" data-page="services.html">Services</a>
-            <a class="nav-link" href="gallery.html" data-page="gallery.html">Gallery</a>
-            <a class="nav-link" href="team.html" data-page="team.html">Team</a>
-            <a class="nav-link" href="contact.html" data-page="contact.html">Contact</a>
+            <a class="nav-link" href="/" data-page="home">Home</a>
+            <a class="nav-link" href="/about" data-page="about">About</a>
+            <a class="nav-link" href="/services" data-page="services">Services</a>
+            <a class="nav-link" href="/gallery" data-page="gallery">Gallery</a>
+            <a class="nav-link" href="/team" data-page="team">Team</a>
+            <a class="nav-link" href="/contact" data-page="contact">Contact</a>
             <a href="#" onclick="openBooking(); return false;" class="btn" style="padding: 8px 16px; font-size: 11px;">Book Now</a>
           </nav>
         </div>
@@ -225,74 +225,41 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /* --- NAV REWRITER (WORKER READY) --- */
-    function nsGetSlugFromHost() {
-      // 1) Preview / Pages / local fallback: ?b=slug
-      const qp = new URLSearchParams(location.search).get("b");
-      if (qp) return String(qp).trim().toLowerCase();
-
-      // 2) Production: slug.netstudiodevelopment.com
-      const host = (location.hostname || "").toLowerCase();
-
-      // Ignore obvious non-slug hosts
-      if (!host || host === "localhost" || host.startsWith("127.")) return null;
-
-      // If we're on the main domain, no slug
-      // (example: netstudiodevelopment.com)
+    /* ================================
+       PROD-ONLY SLUG DETECTION
+       slug.netstudiodevelopment.com ONLY
+       - slug is first subdomain label
+       - NO query params
+       - NO pages.dev/workers.dev/localhost
+    ================================== */
+    function nsDetectSlugProdOnly() {
       const ROOT = "netstudiodevelopment.com";
-      if (host === ROOT || host === "www." + ROOT) return null;
-
-      // If it's a subdomain of ROOT, first label is the slug
-      if (host.endsWith("." + ROOT)) {
-        const slug = host.slice(0, -(ROOT.length + 1)).split(".")[0];
-        return slug || null;
-      }
-
-      // Otherwise unknown host: no slug
-      return null;
-    }
-
-    function nsShouldUseQuerySlug() {
       const host = (location.hostname || "").toLowerCase();
-      return (
-        host.endsWith(".pages.dev") ||
-        host.endsWith(".workers.dev") ||
-        host === "localhost" ||
-        host.startsWith("127.")
-      );
-    }
 
-    function nsLinkWithSlug(targetPath) {
-      const slug = nsGetSlugFromHost();
-      if (!slug) return targetPath;
+      // Must be a subdomain of ROOT, not ROOT itself
+      if (!host || host === ROOT || host === "www." + ROOT) return null;
+      if (!host.endsWith("." + ROOT)) return null;
 
-      // On production (slug.netstudiodevelopment.com) we want CLEAN paths:
-      // /about.html, /services.html, etc. No ?b=
-      if (!nsShouldUseQuerySlug()) return targetPath;
+      // prefix = everything before .netstudiodevelopment.com
+      const prefix = host.slice(0, -(ROOT.length + 1)); // remove ".ROOT"
+      if (!prefix) return null;
 
-      // On preview (pages.dev), append ?b=slug
-      const u = new URL(targetPath, location.href);
-      u.searchParams.set("b", slug);
-      return u.pathname + "?" + u.searchParams.toString() + u.hash;
-    }
+      // ENFORCE: slug is EXACTLY one label (no a.b.netstudiodevelopment.com)
+      if (prefix.includes(".")) return null;
 
-    function nsWireHeaderNav() {
-      const logo = document.getElementById("header_logo");
-      if (logo) logo.setAttribute("href", nsLinkWithSlug("index.html"));
-      document.querySelectorAll("a.nav-link[data-page]").forEach(a => {
-        const page = a.getAttribute("data-page") || a.getAttribute("href") || "index.html";
-        a.setAttribute("href", nsLinkWithSlug(page));
-        const current = location.pathname.split("/").pop() || "index.html";
-        if (page === current) a.classList.add("active");
-        else a.classList.remove("active");
-      });
+      const slug = prefix.trim();
+
+      // Basic slug validation
+      if (!/^[a-z0-9-]{2,64}$/.test(slug)) return null;
+
+      return slug;
     }
 
     /* --- DB CORE --- */
     window.NS = {
       SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-      BUSINESS_SLUG: nsGetSlugFromHost(),
+      BUSINESS_SLUG: nsDetectSlugProdOnly(),
       TEMPLATE_KEY: "den_v1"
     };
 
@@ -331,8 +298,12 @@
       }
 
       async function loadHours(businessId){
-        const { data, error } = await sb.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("business_id", businessId);
-        return (error) ? null : data;
+        const { data, error } = await sb
+          .from("business_hours")
+          .select("day_of_week, open_time, close_time, is_closed")
+          .eq("business_id", businessId);
+
+        return error ? null : data;
       }
 
       function apply(data) {
@@ -393,23 +364,37 @@
       }
 
       async function init() {
+        // HARD FAIL if not slug.netstudiodevelopment.com
         if (!NS.BUSINESS_SLUG) {
           document.getElementById("site-error").style.display = "block";
           return;
         }
 
-        const { data: biz, error } = await sb.from("business").select("id").eq("slug", NS.BUSINESS_SLUG).maybeSingle();
-        if (error || !biz) { document.getElementById("site-error").style.display = "block"; return; }
+        // BUSINESS LOOKUP: business.slug === detected_slug
+        const { data: biz, error } = await sb
+          .from("business")
+          .select("id")
+          .eq("slug", NS.BUSINESS_SLUG)
+          .maybeSingle();
+
+        if (error || !biz) {
+          document.getElementById("site-error").style.display = "block";
+          return;
+        }
+
         document.body.dataset.businessId = biz.id;
-        
+
         const [siteRes, hoursRes] = await Promise.all([
-          sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", NS.TEMPLATE_KEY).maybeSingle(),
+          sb.from("business_sites")
+            .select("content_json")
+            .eq("business_id", biz.id)
+            .eq("template_key", NS.TEMPLATE_KEY)
+            .maybeSingle(),
           loadHours(biz.id)
         ]);
 
         apply(siteRes.data?.content_json || {});
         renderHoursFromRows(hoursRes || []);
-        nsWireHeaderNav();
       }
 
       init();
