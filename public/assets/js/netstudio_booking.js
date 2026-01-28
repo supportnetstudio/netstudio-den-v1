@@ -1,9 +1,9 @@
 /**
- * NetStudio Booking Engine v3.3
- * Fixes: 
- * 1. Dual-Path Lookup (Handles both legacy menu_item_id and new team_item_id)
- * 2. Self-Healing Service Logic (Forces 30m default if DB duration is missing/null)
- * 3. Customer Upsert (Prevents Unique Key Violation)
+ * NetStudio Booking Engine v3.6
+ * - Robust Time Parsing (Fixes 12:xx PM edge cases)
+ * - Safe Service Lookup (maybeSingle everywhere)
+ * - Customer Upsert via Email OR Phone
+ * - Dual API Support
  */
 (async function () {
   if (window.__NSD_BOOKING_INIT__) return;
@@ -212,12 +212,29 @@
     setStep(0);
   };
 
-  window.openBooking = () => {
+  window.openBooking = (opts) => {
     const m = document.getElementById("nsdModalContainer");
     if (!m) return;
+  
     resetFlow();
     m.classList.add("active");
     document.body.style.overflow = "hidden";
+  
+    // Accept object API: openBooking({ staff_id })
+    let staffId = null;
+    if (opts && typeof opts === "object") {
+      staffId = opts.staff_id || opts.team_member_id || null;
+    } else if (typeof opts === "string") {
+      staffId = opts; // Backward compatible fallback
+    }
+  
+    // Preselect barber if provided
+    const sel = document.getElementById("nsdBarber");
+    if (staffId && sel) {
+      sel.value = staffId;
+      try { sel.dispatchEvent(new Event("change", { bubbles: true })); } catch(e) {}
+    }
+  
     renderCalendar();
   };
 
@@ -393,7 +410,7 @@
   document.getElementById("nsdTimeContinue").onclick = () => { setStep(3); loadServices(); };
   document.getElementById("nsdBackToTime").onclick = () => setStep(2);
 
-  // 12. Submit Logic - V3.3 (Dual-Path Lookup + Self-Healing) ✅
+  // 12. Submit Logic - V3.6 (Robust Time Parse + Safe Lookup) ✅
   document.getElementById("nsdSubmitBtn").onclick = async () => {
     const btn = document.getElementById("nsdSubmitBtn");
     
@@ -418,13 +435,14 @@
     let svcData = null;
     let svcErr = null;
 
-    // Try 1: Lookup as team_member_menu_items.id (New standard)
+    // Try 1: Lookup as team_member_menu_items.id
+    // ✅ PATCH: Safe lookup with maybeSingle
     {
       const r1 = await supabase
         .from("team_member_menu_items")
         .select("id, duration_min, menu_item_id") 
         .eq("id", selectedServiceId)
-        .single();
+        .maybeSingle(); 
       
       if (!r1.error && r1.data) {
         svcData = r1.data;
@@ -440,39 +458,36 @@
         .select("id, duration_min, menu_item_id") 
         .eq("menu_item_id", selectedServiceId)
         .eq("business_id", BUSINESS_ID)
-        .single(); // Might need limit(1) if duplicates exist
+        .limit(1) // ✅ Prevent crash if duplicates exist
+        .maybeSingle(); 
 
       if (!r2.error && r2.data) {
         svcData = r2.data;
-        svcErr = null; // Clear error if fallback succeeded
+        svcErr = null;
       }
     }
 
-    // Self-Healing Block (Same as v3.2)
+    // Self-Healing Block
     if (svcErr || !svcData) {
       console.warn("NSD: Service lookup failed, forcing fallback duration", svcErr?.message);
       svcRow = {
         id: selectedServiceId,
-        menu_item_id: selectedServiceId, // fallback parent
-        duration_min: 30                 // hard default
+        menu_item_id: selectedServiceId, 
+        duration_min: 30
       };
     } else {
       svcRow = svcData;
-
-      // If duration is missing, inject a default
       if (!svcRow.duration_min) {
         console.warn("NSD: Service missing duration, forcing 30min default");
         svcRow.duration_min = 30;
       }
-
-      // If parent menu_item_id is missing, mirror team item id
       if (!svcRow.menu_item_id) {
         console.warn("NSD: Service missing parent menu_item_id, mirroring id");
         svcRow.menu_item_id = svcRow.id;
       }
     }
 
-    // --- STEP 1: UPSERT CUSTOMER ---
+    // --- STEP 1: UPSERT CUSTOMER (email OR phone) ✅ ---
     const customerPayload = {
       business_id: BUSINESS_ID,
       email: clientEmail || null,
@@ -484,72 +499,84 @@
 
     let customerId = null;
 
+    // Prefer email match if provided, else phone match
+    let find = supabase.from("customers").select("id");
     if (clientEmail) {
-      const { data: existingCustomer, error: findErr } = await supabase
+      find = find.eq("business_id", BUSINESS_ID).eq("email", clientEmail);
+    } else {
+      find = find.eq("business_id", BUSINESS_ID).eq("phone", clientPhone);
+    }
+
+    const { data: existingCustomer, error: findErr } = await find.maybeSingle();
+
+    if (findErr) {
+      alert("Customer lookup failed: " + findErr.message);
+      btn.disabled = false;
+      btn.textContent = "Confirm Booking";
+      return;
+    }
+
+    if (existingCustomer?.id) {
+      customerId = existingCustomer.id;
+      // Update existing customer info
+      const { error: uErr } = await supabase.from("customers").update(customerPayload).eq("id", customerId);
+      if (uErr) console.warn("NSD: customer update failed", uErr.message);
+    } else {
+      // Create new customer
+      const { data: newCustomer, error: createErr } = await supabase
         .from("customers")
+        .insert([customerPayload])
         .select("id")
-        .eq("business_id", BUSINESS_ID)
-        .eq("email", clientEmail)
         .single();
 
-      if (findErr && findErr.code !== "PGRST116") {
-        alert("Customer lookup failed: " + findErr.message);
+      if (createErr) {
+        alert("Customer create failed: " + createErr.message);
         btn.disabled = false;
         btn.textContent = "Confirm Booking";
         return;
       }
-
-      if (existingCustomer?.id) {
-        customerId = existingCustomer.id;
-        await supabase.from("customers").update(customerPayload).eq("id", customerId);
-      } else {
-        const { data: newCustomer, error: createErr } = await supabase
-          .from("customers")
-          .insert([customerPayload])
-          .select("id")
-          .single();
-
-        if (createErr) {
-          alert("Customer create failed: " + createErr.message);
-          btn.disabled = false;
-          btn.textContent = "Confirm Booking";
-          return;
-        }
-        customerId = newCustomer.id;
-      }
+      customerId = newCustomer.id;
     }
 
     // --- STEP 2: CREATE BOOKING ---
     const combinedDate = new Date(selectedDate);
-    const [time, modifier] = selectedTimeLabel.split(" ");
-    let [hours, minutes] = time.split(":");
-    if (hours === "12") hours = "00";
-    if (modifier === "PM") hours = parseInt(hours, 10) + 12;
-    combinedDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    
+    // ✅ PATCH: Robust Time Parsing
+    const m = selectedTimeLabel.match(/(\d{1,2}):(\d{2})\s*([AP]M)/i);
+    if (!m) {
+      alert("Invalid time selected.");
+      btn.disabled = false;
+      btn.textContent = "Confirm Booking";
+      return;
+    }
+    let hh = parseInt(m[1], 10);
+    let mm = parseInt(m[2], 10);
+    const ap = m[3].toUpperCase();
+
+    if (ap === "AM") {
+      if (hh === 12) hh = 0;
+    } else {
+      if (hh !== 12) hh += 12;
+    }
+    combinedDate.setHours(hh, mm, 0, 0);
+    
     const startAt = combinedDate.toISOString();
 
     const payload = {
       business_id: BUSINESS_ID,
       team_member_id: document.getElementById("nsdBarber").value || null,
-
-      // Dual ID Resolution
       menu_item_id: svcRow.menu_item_id,        
       team_member_menu_item_id: svcRow.id,      
-
       start_at: startAt,
       date_only: dateOnly,
       time_label: selectedTimeLabel,
-
       client_name: clientName,
       client_phone: clientPhone,
       client_email: clientEmail || null,
-      
       sms_opt_in: customerPayload.sms_opt_in,
       email_opt_in: customerPayload.email_opt_in,
-
       status: "booked",
       source: "public_booking",
-
       customer_id: customerId,
     };
 
