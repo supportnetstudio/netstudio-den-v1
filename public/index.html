@@ -244,20 +244,33 @@
     (() => {
       const sb = supabase.createClient(NS.SB_URL, NS.SB_KEY);
 
+      // ✅ SELECTOR SCOPE FIX: $ is now available globally within this IIFE
+      const $ = (id) => document.getElementById(id);
+
       function nsDayOrder(d){ return { monday:1, tuesday:2, wednesday:3, thursday:4, friday:5, saturday:6, sunday:7 }[String(d||"").toLowerCase()] || 99; }
       function nsFmtTime(t){ if (!t) return ""; const parts = String(t).split(":"); const hh = parseInt(parts[0], 10); const mm = parts[1] || "00"; const ampm = hh >= 12 ? "PM" : "AM"; const h12 = ((hh + 11) % 12) + 1; return `${h12}:${mm} ${ampm}`; }
 
+      // ✅ BOOKING ENGINE LOADER
+      function nsLoadBookingEngine() {
+        return new Promise((resolve) => {
+          if (window.NetStudio && typeof window.NetStudio.open === "function") return resolve(true);
+          const s = document.createElement("script");
+          s.src = "/netstudio_booking.js";
+          s.async = true;
+          s.onload = () => resolve(true);
+          s.onerror = () => resolve(false);
+          document.body.appendChild(s);
+        });
+      }
+
       function apply(data, biz) {
-        const $ = (id) => document.getElementById(id);
         const pick = (...vals) => vals.find(v => v !== undefined && v !== null && String(v).trim() !== "") || "";
 
-        // Standardized Paths from Master Schema
         const home = data.home || {};
         const hero = home.hero || {};
         const intro = home.intro || {};
         const extra = home.section_extra || {};
 
-        // 1. GLOBAL IDENTITY
         const bName = biz.name || "Barbershop";
         document.title = `${bName} — Net Studio`;
         const names = String(bName).trim().split(/\s+/);
@@ -267,7 +280,6 @@
         if ($("visit_name")) $("visit_name").textContent = bName;
         if ($("footer_copy")) $("footer_copy").textContent = `© ${new Date().getFullYear()} ${bName}. Powered by Net Studio.`;
 
-        // 2. HERO (Master Schema: home.hero)
         const heroEl = document.querySelector(".hero");
         const hBg = pick(hero.bg_image, biz.hero_bg_url);
         if (hBg && heroEl) heroEl.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${hBg}')`;
@@ -276,12 +288,10 @@
         if ($("hero_sub")) $("hero_sub").innerHTML = pick(hero.subheadline, "Traditional cuts, modern vibe.");
         if ($("hero_cta_text")) $("hero_cta_text").textContent = pick(hero.primary_cta?.text, "Book Appointment");
 
-        // 3. ABOUT (Master Schema: home.intro)
         if ($("about_kicker")) $("about_kicker").textContent = pick(intro.kicker, "About Us");
         if ($("about_heading")) $("about_heading").textContent = pick(intro.headline, "A Back Home Kinda Thang");
         if ($("about_text")) $("about_text").textContent = pick(intro.body, biz.bio);
 
-        // 4. HIRING / EXTRA (Master Schema: home.section_extra)
         const hiringEl = $("hiring_card");
         if (hiringEl) {
           hiringEl.style.display = extra.show === false ? "none" : "block";
@@ -292,7 +302,6 @@
           if ($("hiring_cta")) $("hiring_cta").href = pick(extra.cta1?.link, "/contact");
         }
 
-        // 5. CONTACT (From Business Table)
         const address = [biz.street_address, biz.city, biz.state].filter(Boolean).join(", ");
         if ($("visit_address")) $("visit_address").innerHTML = address || "Location coming soon.";
         if ($("visit_phone")) $("visit_phone").textContent = biz.phone || "";
@@ -300,7 +309,10 @@
         
         const q = biz.map_query || address;
         if (q && $("visit_map")) {
-          $("visit_map").src = `http://googleusercontent.com/maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
+          // ✅ GOOGLE MAPS FIX: Correct embed URL
+          $("visit_map").src = `https://www.google.com/maps/embed/v1/place?key=REPLACE_WITH_YOUR_KEY_OR_USE_GENERIC_IF_ALLOWED&q=${encodeURIComponent(q)}&zoom=13`;
+          // Alternative generic embed if no key:
+          $("visit_map").src = `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
         }
 
         if (window.lucide) lucide.createIcons();
@@ -308,25 +320,27 @@
       }
 
       async function init() {
-        if (!NS.SLUG) { $("site-error").style.display = "block"; return; }
+        if (!NS.SLUG) { if($("site-error")) $("site-error").style.display = "block"; return; }
 
         const { data: biz } = await sb.from("business").select("*").eq("slug", NS.SLUG).maybeSingle();
-        if (!biz) { $("site-error").style.display = "block"; return; }
+        if (!biz) { if($("site-error")) $("site-error").style.display = "block"; return; }
 
-        // Context for booking engine
         window.NS_BUSINESS_ID = biz.id;
+        
+        // ✅ LOAD BOOKING ENGINE DYNAMICALLY
+        await nsLoadBookingEngine();
 
         const [siteRes, hoursRes] = await Promise.all([
           sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", NS.TEMPLATE).maybeSingle(),
           sb.from("business_hours").select("*").eq("business_id", biz.id)
         ]);
 
-        // Render Hours
         const hList = $("hours_list");
         if (hList && hoursRes.data) {
           hList.innerHTML = hoursRes.data.sort((a,b) => nsDayOrder(a.day_of_week) - nsDayOrder(b.day_of_week)).map(r => {
             const closed = !!r.is_closed;
-            return `<div class="hours-row"><span class="hours-day">${r.day_of_week.charAt(0).toUpperCase()+r.day_of_week.slice(1)}</span><span class="hours-time" ${closed ? 'style="color:var(--accent)"':''}>${closed ? "Closed" : nsFmtTime(r.open_time)+" - "+nsFmtTime(r.close_time)}</span></div>`;
+            const label = r.day_of_week.charAt(0).toUpperCase() + r.day_of_week.slice(1).toLowerCase();
+            return `<div class="hours-row"><span class="hours-day">${label}</span><span class="hours-time" ${closed ? 'style="color:var(--accent)"':''}>${closed ? "Closed" : nsFmtTime(r.open_time)+" - "+nsFmtTime(r.close_time)}</span></div>`;
           }).join("");
         }
 
