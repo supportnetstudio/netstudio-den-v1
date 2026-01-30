@@ -375,13 +375,14 @@
       applyGalleryContent(site?.content_json || {});
 
       // 3) get gallery rows
-      // ✅ PATCH: Correct table name, force schema, check is_active, AND log errors
+      // ✅ PATCH: Filter by type='shop' and is_profile=false (No 'is_active' column)
       const { data: rows, error: gErr } = await sb
         .schema("public")
-        .from("gallery_image") // Correct singular name
+        .from("gallery_image")
         .select("id, image_url, team_member_id, caption, type, is_profile, created_at")
         .eq("business_id", biz.id)
-        .eq("is_active", true) // Added active check
+        .eq("type", "shop")
+        .eq("is_profile", false)
         .order("created_at", { ascending: false });
 
       if (gErr) console.error("Gallery load error:", gErr);
