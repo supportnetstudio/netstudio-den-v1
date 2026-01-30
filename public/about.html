@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>About — Powered by Net Studio</title>
+  <title>About Us — The Den Barbershop</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -65,14 +65,11 @@
       .nav-wrap { flex-direction: column; height: auto; padding: 10px 0; }
     }
     
-    #site-error { display: none; text-align: center; padding: 100px 20px; color: #666; font-size: 14px;}
+    #site-error { display: none; text-align: center; padding: 100px 20px; }
   </style>
 
   <script>
-    window.nsOpenBooking = window.nsOpenBooking || function(payload = {}) {
-      if (window.NetStudio && typeof window.NetStudio.open === "function") return window.NetStudio.open(payload);
-      console.warn("Booking engine loading...");
-    };
+    window.openBooking = window.openBooking || function () { console.warn("Booking engine not yet loaded."); };
   </script>
 </head>
 <body>
@@ -85,29 +82,36 @@
   <div id="main-content" style="opacity: 0; transition: opacity 0.5s ease;">
     <header>
       <div class="container nav-wrap">
-        <a href="index.html" class="logo" id="header_logo">THE <span>DEN</span></a>
-        <nav class="nav-links" aria-label="Primary">
-          <a class="nav-link" href="index.html" data-page="home">Home</a>
-          <a class="nav-link" href="about.html" data-page="about">About</a>
-          <a class="nav-link" href="services.html" data-page="services">Services</a>
-          <a href="#" class="btn" style="padding: 8px 16px; font-size: 11px;" onclick="nsOpenBooking(); return false;">Book Now</a>
-        </nav>
+<a href="/" class="logo" id="header_logo">THE <span>DEN</span></a>
+<nav class="nav-links" aria-label="Primary">
+  <a class="nav-link" href="/" data-page="home">Home</a>
+  <a class="nav-link" href="/about" data-page="about">About</a>
+  <a class="nav-link" href="/services" data-page="services">Services</a>
+  <a class="nav-link" href="/gallery" data-page="gallery">Gallery</a>
+  <a href="#" class="btn" style="padding: 8px 16px; font-size: 11px;" onclick="openBooking(); return false;">Book Now</a>
+</nav>
       </div>
     </header>
 
     <main class="container">
       <section class="about-hero">
-        <span class="section-title" id="about_kicker"></span>
-        <h1 id="about_heading"></h1>
-        <p id="about_text" style="max-width: 700px; margin: 0 auto; color: var(--text-muted); font-size: 18px;"></p>
+        <span class="section-title" id="about_kicker">Our Story</span>
+        <h1 id="about_heading">A Tradition of Excellence</h1>
+        <p id="about_text" style="max-width: 700px; margin: 0 auto; color: var(--text-muted); font-size: 18px;">
+          Welcome to The Den. Since our founding, we've been dedicated to the art of grooming and the culture of the neighborhood barbershop.
+        </p>
       </section>
 
       <div class="about-grid">
-        <img src="" alt="About" class="about-img" id="about_image">
+        <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=1000" alt="Barbershop interior" class="about-img" id="about_image_1">
         <div>
-          <h2 style="font-size: 28px; margin-bottom: 20px;" id="story_title"></h2>
-          <p style="color: var(--text-muted); margin-bottom: 20px;" id="story_p1"></p>
-          <p style="color: var(--text-muted);" id="story_p2"></p>
+          <h2 style="font-size: 28px; margin-bottom: 20px;" id="about_story_title">The Neighborhood Spot</h2>
+          <p style="color: var(--text-muted); margin-bottom: 20px;" id="about_story_text">
+            We believe a barbershop should be more than just a place for a haircut. It's a sanctuary, a place for conversation, and a pillar of the community.
+          </p>
+          <p style="color: var(--text-muted);" id="about_story_footer">
+            Our master barbers combine old-school techniques with modern styles to ensure you leave looking and feeling your best.
+          </p>
         </div>
       </div>
     </main>
@@ -115,76 +119,163 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    (() => {
-      const $ = (id) => document.getElementById(id);
-      const pick = (...vals) => vals.find(v => v !== undefined && v !== null && String(v).trim() !== "") || "";
+    /* --- NAV REWRITER (WORKER READY) --- */
+    function nsGetSlugFromHost() {
+      // 1) Preview / Pages / local fallback: ?b=slug
+      const qp = new URLSearchParams(location.search).get("b");
+      if (qp) return String(qp).trim().toLowerCase();
 
-      function nsDetectSlug() {
-        const ROOT = "netstudiodevelopment.com";
-        const host = (location.hostname || "").toLowerCase();
-        if (!host || host === ROOT || host === "www." + ROOT) return null;
-        if (host.endsWith("." + ROOT)) return host.slice(0, -(ROOT.length + 1)).split(".")[0];
-        return new URLSearchParams(location.search).get("b");
+      // 2) Production: slug.netstudiodevelopment.com
+      const host = (location.hostname || "").toLowerCase();
+
+      if (!host || host === "localhost" || host.startsWith("127.")) return null;
+
+      const ROOT = "netstudiodevelopment.com";
+      if (host === ROOT || host === "www." + ROOT) return null;
+
+      if (host.endsWith("." + ROOT)) {
+        const slug = host.slice(0, -(ROOT.length + 1)).split(".")[0];
+        return slug || null;
       }
 
-      const NS = {
-        SB_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
-        SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-        SLUG: nsDetectSlug(),
-        TEMPLATE: "den_v1"
-      };
+      return null;
+    }
 
-      const sb = supabase.createClient(NS.SB_URL, NS.SB_KEY);
+    function nsShouldUseQuerySlug() {
+      const host = (location.hostname || "").toLowerCase();
+      return (
+        host.endsWith(".pages.dev") ||
+        host.endsWith(".workers.dev") ||
+        host === "localhost" ||
+        host.startsWith("127.")
+      );
+    }
 
-      function apply(data, biz) {
-        // Master Schema Mapping
-        const about = data.about || {};
-        const hero = about.hero || {};
-        const story = about.story || {};
+    function nsLinkWithSlug(targetPath) {
+      const slug = nsGetSlugFromHost();
+      if (!slug) return targetPath;
 
-        const bName = biz.name || "The Den";
-        document.title = `About ${bName} — Powered by Net Studio`;
-        
-        // Logo logic
-        const names = bName.split(" ");
-        const logoHTML = names.length > 1 ? `${names[0]} <span>${names.slice(1).join(" ")}</span>` : names[0];
-        if($("header_logo")) $("header_logo").innerHTML = logoHTML;
+      // Production: clean paths, no ?b=
+      if (!nsShouldUseQuerySlug()) return targetPath;
 
-        // Content
-        if($("about_kicker"))  $("about_kicker").textContent = pick(hero.kicker, "Our Story");
-        if($("about_heading")) $("about_heading").textContent = pick(hero.headline, "A Tradition of Excellence");
-        if($("about_text"))    $("about_text").textContent = pick(hero.body, biz.bio, "");
+      // Preview: keep ?b=slug
+      const u = new URL(targetPath, location.href);
+      u.searchParams.set("b", slug);
+      return u.pathname + "?" + u.searchParams.toString() + u.hash;
+    }
 
-        if($("story_title")) $("story_title").textContent = pick(story.title, "The Neighborhood Spot");
-        if($("story_p1"))    $("story_p1").textContent = pick(story.body_p1, "");
-        if($("story_p2"))    $("story_p2").textContent = pick(story.body_p2, "");
-        
-        if($("about_image")) {
-           $("about_image").src = pick(story.image, "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=1000");
+    function nsWireHeaderNav() {
+      const logo = document.getElementById("header_logo");
+      if (logo) logo.setAttribute("href", nsLinkWithSlug("index.html"));
+
+      document.querySelectorAll("a.nav-link[data-page]").forEach(a => {
+        const page = a.getAttribute("data-page") || a.getAttribute("href") || "index.html";
+        a.setAttribute("href", nsLinkWithSlug(page));
+
+        const current = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+        if (page.toLowerCase() === current) a.classList.add("active");
+        else a.classList.remove("active");
+      });
+    }
+
+    window.NS = {
+      SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
+      BUSINESS_SLUG: nsGetSlugFromHost(),
+      TEMPLATE_KEY: "den_v1"
+    };
+
+    /* --- DATA LOADING --- */
+    (() => {
+      const NS = window.NS;
+      const sb = supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
+
+      function apply(data) {
+        const c = data || {};
+        const $ = (id) => document.getElementById(id);
+        const pick = (...vals) => {
+          for (const v of vals) { if (v !== undefined && v !== null && String(v).trim() !== "") return v; }
+          return "";
+        };
+
+        // ✅ About Page Specific Keys (Sync with nested & flat paths)
+        const aboutN = c.about || {};
+
+        // HERO SECTION
+        if ($("about_kicker"))  $("about_kicker").textContent = pick(c.about_kicker, aboutN.kicker, "Our Story");
+        if ($("about_heading")) $("about_heading").textContent = pick(c.about_heading, aboutN.heading, "A Tradition of Excellence");
+        if ($("about_text"))    $("about_text").textContent   = pick(c.about_text, aboutN.text, aboutN.body, $("about_text").textContent);
+
+        // ✅ STORY BLOCK (supports builder nested + flat)
+        const storyN = aboutN.story || {};
+
+        if ($("about_story_title")) {
+          $("about_story_title").textContent = pick(
+            c.about_story_title,
+            storyN.title,
+            aboutN.story_title,
+            aboutN.neighborhood_title,
+            $("about_story_title").textContent
+          );
         }
 
-        $("main-content").style.opacity = "1";
+        if ($("about_story_text")) {
+          $("about_story_text").textContent = pick(
+            c.about_story_p1,          // builder flat mirror
+            c.about_story_text,        // legacy id mirror
+            storyN.p1,                 // ✅ builder nested
+            aboutN.story_text,
+            aboutN.neighborhood_p1,
+            $("about_story_text").textContent
+          );
+        }
+
+        if ($("about_story_footer")) {
+          $("about_story_footer").textContent = pick(
+            c.about_story_p2,          // builder flat mirror
+            c.about_story_footer,      // legacy id mirror
+            storyN.p2,                 // ✅ builder nested
+            aboutN.story_footer,
+            aboutN.neighborhood_p2,
+            $("about_story_footer").textContent
+          );
+        }
+
+        // ✅ IMAGES
+        const img1 = pick(c.about_image_1, aboutN.image_1, aboutN.img_1, "");
+        if (img1 && $("about_image_1")) $("about_image_1").src = img1;
+
+        document.getElementById("main-content").style.opacity = "1";
+        if (window.lucide) lucide.createIcons();
       }
 
       async function init() {
-        if (!NS.SLUG) { if($("site-error")) $("site-error").style.display = "block"; return; }
+        const reveal = () => document.getElementById("main-content").style.opacity = "1";
 
-        const { data: biz } = await sb.from("business").select("*").eq("slug", NS.SLUG).maybeSingle();
-        if (!biz) { if($("site-error")) $("site-error").style.display = "block"; return; }
+        if (!NS.BUSINESS_SLUG) { 
+            document.getElementById("site-error").style.display = "block"; 
+            reveal();
+            return; 
+        }
 
-        window.NS_BUSINESS_ID = biz.id;
+        const { data: biz, error: bErr } = await sb.from("business").select("id").eq("slug", NS.BUSINESS_SLUG).maybeSingle();
+        
+        if (bErr || !biz) { 
+            document.getElementById("site-error").style.display = "block"; 
+            reveal();
+            return; 
+        }
 
-        const { data: site } = await sb.from("business_sites")
-          .select("content_json")
-          .eq("business_id", biz.id)
-          .eq("template_key", NS.TEMPLATE)
-          .maybeSingle();
-
-        apply(site?.content_json || {}, biz);
+        const { data: site } = await sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", NS.TEMPLATE_KEY).maybeSingle();
+        
+        nsWireHeaderNav();
+        apply(site?.content_json || {});
       }
 
       init();
     })();
   </script>
+
+  <script src="/assets/js/netstudio_booking.js"></script>
 </body>
 </html>
