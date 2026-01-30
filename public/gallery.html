@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>The Den — Gallery</title>
+  <title>Gallery — Powered by Net Studio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
+    /* --- CORE VARIABLES --- */
     :root {
       --bg-dark: #050507;
       --bg-gradient: radial-gradient(circle at top, #1b1b22 0%, #000 100%);
@@ -19,16 +20,15 @@
       --font-body: 'Inter', system-ui, -apple-system, sans-serif;
     }
 
+    /* --- RESET --- */
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width:100%; max-width:100%; overflow-x:hidden; }
-    img, iframe { max-width:100%; height:auto; display:block; }
-
     body {
       background: var(--bg-gradient);
       color: var(--text-main);
       font-family: var(--font-body);
       line-height: 1.6;
       padding-top: 80px;
+      overflow-x: hidden;
     }
 
     .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
@@ -38,10 +38,9 @@
       background: var(--accent); color: white;
       padding: 10px 20px; border-radius: 99px;
       font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-      text-decoration: none; font-size: 11px; border: none; cursor: pointer;
+      text-decoration: none; font-size: 11px; cursor: pointer;
       transition: 0.2s;
     }
-    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
 
     .section-title {
       font-size: 12px; color: var(--accent); letter-spacing: 0.2em;
@@ -50,35 +49,28 @@
     }
     h2 { font-size: 32px; font-weight: 800; text-align: center; margin-bottom: 40px; }
 
+    /* --- NAVIGATION --- */
     header {
       position: fixed; top: 0; width: 100%; z-index: 100;
       background: rgba(0,0,0,0.8); backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--glass-border);
     }
     .nav-wrap { display: flex; justify-content: space-between; align-items: center; height: 70px; }
-
-    .logo { 
-      font-weight: 900; font-size: 20px; text-transform: uppercase; 
-      letter-spacing: 0.1em; font-style: italic;
-      text-decoration: none; color: var(--text-main);
-    }
+    .logo { font-weight: 900; font-size: 20px; text-transform: uppercase; font-style: italic; text-decoration: none; color: var(--text-main); }
     .logo span { color: var(--accent); }
-
     .nav-links { display: flex; gap: 24px; }
-    .nav-links a {
-      color: var(--text-muted); text-decoration: none; font-size: 13px;
-      font-weight: 500; text-transform: uppercase;
-    }
-    .nav-links a:hover, .nav-links a.active { color: white; }
+    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; text-transform: uppercase; }
+    .nav-links a.active { color: white; }
 
+    /* --- GALLERY GRID --- */
     .den-gallery {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 20px;
       padding-bottom: 40px;
     }
     .den-photo {
-      height: 350px;
+      height: 400px;
       background-size: cover;
       background-position: center;
       border-radius: 4px;
@@ -98,272 +90,145 @@
     }
 
     .photo-tag {
-      position: absolute; bottom: 10px; left: 10px;
+      position: absolute; bottom: 15px; left: 15px;
       background: var(--accent); color: white;
       font-size: 10px; font-weight: 700; 
       padding: 6px 12px; text-transform: uppercase;
       opacity: 0; transform: translateY(10px); transition: 0.3s;
       border-radius: 4px;
-      max-width: calc(100% - 20px);
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
     }
     .den-photo:hover .photo-tag { opacity: 1; transform: translateY(0); }
 
-    footer {
-      border-top: 1px solid var(--glass-border);
-      padding: 60px 0;
-      margin-top: 20px;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 13px;
-    }
+    footer { border-top: 1px solid var(--glass-border); padding: 60px 0; text-align: center; color: var(--text-muted); font-size: 13px; }
 
     @media (max-width: 768px){
       .nav-links { display:none; }
-      .photo-tag { opacity:1; transform:none; }
-      .den-photo { filter: grayscale(0%) contrast(1); }
-      .den-photo:hover { transform: none; border-color: var(--glass-border); box-shadow: none; }
+      .den-photo { filter: grayscale(0%); height: 350px; }
+      .photo-tag { opacity: 1; transform: none; }
     }
+    #site-error { display: none; text-align: center; padding: 100px 20px; color: #666; font-size: 14px;}
   </style>
 
   <script>
-    window.openBooking = window.openBooking || function () { console.log("Trigger Booking"); };
-    window.closeBooking = window.closeBooking || function () {};
+    window.nsOpenBooking = window.nsOpenBooking || function(payload = {}) {
+      if (window.NetStudio && typeof window.NetStudio.open === "function") return window.NetStudio.open(payload);
+      console.warn("Booking engine loading...");
+    };
   </script>
 </head>
-
 <body>
 
-  <header>
-    <div class="container nav-wrap">
-      <a href="/" class="logo" id="header_logo">THE <span>DEN</span></a>
+  <div id="site-error"><h2>404</h2><p>Gallery not found.</p></div>
 
-      <nav class="nav-links" aria-label="Primary">
-        <a class="nav-link" href="/" data-page="home">Home</a>
-        <a class="nav-link" href="/about" data-page="about">About</a>
-        <a class="nav-link" href="/services" data-page="services">Services</a>
-        <a class="nav-link active" href="/gallery" data-page="gallery">Gallery</a>
-      </nav>
-
-      <a href="#book" class="btn" style="padding: 8px 16px; font-size: 11px;" onclick="openBooking(); return false;">Book Now</a>
-    </div>
-  </header>
-
-  <main class="container" style="margin-top: 40px;">
-    <span class="section-title" id="gallery_kicker">Our Work</span>
-    <h2 id="gallery_heading">Fresh Cuts & Fades</h2>
-    <p id="gallery_text" style="text-align:center; color:var(--text-muted); max-width:500px; margin:0 auto 60px;">
-      Real clients. Real results. No filters. Hover over an image to see the detail.
-    </p>
-
-    <div class="den-gallery" id="gallery_grid"></div>
-  </main>
-
-  <footer>
-    <div class="container">
-      <div style="font-weight:900; font-size:24px; margin-bottom:20px; text-transform:uppercase; font-style:italic;">
-        THE <span style="color:var(--accent)">DEN</span>
+  <div id="main-content" style="opacity: 0; transition: opacity 0.5s ease;">
+    <header>
+      <div class="container nav-wrap">
+        <a href="index.html" class="logo" id="header_logo">THE <span>DEN</span></a>
+        <nav class="nav-links">
+          <a href="index.html">Home</a>
+          <a href="about.html">About</a>
+          <a href="services.html">Services</a>
+          <a href="gallery.html" class="active">Gallery</a>
+        </nav>
+        <a href="#" class="btn" onclick="nsOpenBooking(); return false;" style="padding: 8px 16px; font-size: 11px;">Book Now</a>
       </div>
-      <p>© 2026 The Den Barbershop. Powered by Net Studio.</p>
-    </div>
-  </footer>
+    </header>
+
+    <main class="container" style="margin-top: 40px;">
+      <span class="section-title" id="gallery_kicker"></span>
+      <h2 id="gallery_heading"></h2>
+      <p id="gallery_text" style="text-align:center; color:var(--text-muted); max-width:500px; margin:0 auto 60px;"></p>
+
+      <div class="den-gallery" id="gallery_grid">
+        </div>
+    </main>
+
+    <footer>
+      <div class="container">
+        <div id="footer_logo" style="font-weight:900; font-size:24px; margin-bottom:10px; text-transform:uppercase; font-style:italic;"></div>
+        <p id="footer_copy"></p>
+      </div>
+    </footer>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /* --- NAV REWRITER --- */
-    function nsGetSlugFromHost() {
-      const qp = new URLSearchParams(location.search).get("b");
-      if (qp) return String(qp).trim().toLowerCase();
-  
-      const host = (location.hostname || "").toLowerCase();
-      if (!host || host === "localhost" || host.startsWith("127.")) return null;
-  
-      const ROOT = "netstudiodevelopment.com";
-      if (host === ROOT || host === "www." + ROOT) return null;
-  
-      if (host.endsWith("." + ROOT)) {
-        const slug = host.slice(0, -(ROOT.length + 1)).split(".")[0];
-        return slug || null;
-      }
-      return null;
-    }
-  
-    function nsShouldUseQuerySlug() {
-      const host = (location.hostname || "").toLowerCase();
-      return (
-        host.endsWith(".pages.dev") ||
-        host.endsWith(".workers.dev") ||
-        host === "localhost" ||
-        host.startsWith("127.")
-      );
-    }
-  
-    function nsLinkWithSlug(targetPath) {
-      const slug = nsGetSlugFromHost();
-      if (!slug) return targetPath;
-      if (!nsShouldUseQuerySlug()) return targetPath;
-  
-      const u = new URL(targetPath, location.origin);
-      u.searchParams.set("b", slug);
-      return u.pathname + "?" + u.searchParams.toString() + u.hash;
-    }
-  
-    function nsWireHeaderNav() {
-      const logo = document.getElementById("header_logo");
-      if (logo) logo.setAttribute("href", nsLinkWithSlug("/"));
+    (() => {
+      const $ = (id) => document.getElementById(id);
+      const pick = (...vals) => vals.find(v => v !== undefined && v !== null && String(v).trim() !== "") || "";
 
-      document.querySelectorAll("a.nav-link[data-page]").forEach(a => {
-        const page = (a.getAttribute("data-page") || "home").toLowerCase();
-        const path = page === "home" ? "/" : page.startsWith("/") ? page : "/" + page;
-        a.setAttribute("href", nsLinkWithSlug(path));
-
-        const current = (location.pathname || "/").replace(/\/+$/, "") || "/";
-        const isHome = current === "/";
-        const isActive = (page === "home" && isHome) || (page !== "home" && current === path);
-
-        if (isActive) a.classList.add("active");
-        else a.classList.remove("active");
-      });
-    }
-  
-    window.NS = {
-      SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
-      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-      BUSINESS_SLUG: nsGetSlugFromHost(),
-      TEMPLATE_KEY: "den_v1"
-    };
-
-    /* ---------- HELPERS ---------- */
-    const $ = (id) => document.getElementById(id);
-
-    function pick(...vals){
-      for (const v of vals) {
-        if (v !== undefined && v !== null && String(v).trim() !== "") return String(v);
-      }
-      return "";
-    }
-
-    function normalizeId(x){
-      return String(x || "").trim();
-    }
-
-    function buildTeamMap(teamJson){
-      const arr = Array.isArray(teamJson) ? teamJson : [];
-      const map = new Map();
-      arr.forEach(m => {
-        const id = normalizeId(m?.id || m?.team_member_id || m?.uuid || "");
-        const name = pick(m?.name_toggle, m?.display_name, m?.name, m?.full_name, "");
-        if (id) map.set(id, name || id);
-      });
-      return map;
-    }
-
-    function overlayForRow(row, teamMap){
-      const tmId = normalizeId(row?.team_member_id);
-      const tmName = tmId ? teamMap.get(tmId) : "";
-      if (tmName) return `Cut by ${tmName}`;
-      return pick(row?.caption, "");
-    }
-
-    function renderGallery(rows, teamMap){
-      const grid = $("gallery_grid");
-      if (!grid) return;
-      grid.innerHTML = "";
-
-      const list = Array.isArray(rows) ? rows : [];
-
-      if (list.length === 0) {
-        grid.innerHTML = `<div style="color:rgba(255,255,255,.65); text-align:center; grid-column:1/-1; padding: 40px 0;">
-          No gallery images yet.
-        </div>`;
-        return;
+      function nsDetectSlug() {
+        const ROOT = "netstudiodevelopment.com";
+        const host = (location.hostname || "").toLowerCase();
+        if (!host || host === ROOT || host === "www." + ROOT) return null;
+        if (host.endsWith("." + ROOT)) return host.slice(0, -(ROOT.length + 1)).split(".")[0];
+        return new URLSearchParams(location.search).get("b");
       }
 
-      list.forEach(r => {
-        const url = pick(r?.image_url, "");
-        if (!url) return;
+      const NS = {
+        SB_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
+        SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
+        SLUG: nsDetectSlug(),
+        TEMPLATE: "den_v1"
+      };
 
-        const label = overlayForRow(r, teamMap);
-        const safeLabel = label.replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      const sb = supabase.createClient(NS.SB_URL, NS.SB_KEY);
 
-        grid.insertAdjacentHTML("beforeend", `
-          <div class="den-photo" style="background-image:url('${url.replace(/'/g,"%27")}')">
-            ${safeLabel ? `<div class="photo-tag">${safeLabel}</div>` : ``}
-          </div>
-        `);
-      });
-    }
+      function apply(data, biz, images, teamMap) {
+        const gallery = data.gallery || {};
+        
+        // Identity
+        const bName = biz.name || "The Den";
+        const names = bName.split(" ");
+        const logoHTML = names.length > 1 ? `${names[0]} <span>${names.slice(1).join(" ")}</span>` : names[0];
+        if($("header_logo")) $("header_logo").innerHTML = logoHTML;
+        if($("footer_logo")) $("footer_logo").innerHTML = logoHTML;
+        if($("footer_copy")) $("footer_copy").textContent = `© ${new Date().getFullYear()} ${bName}. Powered by Net Studio.`;
 
-    function applyGalleryContent(contentJson){
-      const c = contentJson || {};
-      const g = c.gallery || {};
-      const kicker  = pick(g.kicker, "Our Work");
-      const heading = pick(g.heading, "Fresh Cuts & Fades");
-      const text    = pick(g.text, "Real clients. Real results. No filters. Hover over an image to see the detail.");
+        // Content
+        if($("gallery_kicker"))  $("gallery_kicker").textContent = pick(gallery.kicker, "Our Work");
+        if($("gallery_heading")) $("gallery_heading").textContent = pick(gallery.heading, "Fresh Cuts & Fades");
+        if($("gallery_text"))    $("gallery_text").textContent   = pick(gallery.text, "Real clients. Real results.");
 
-      if ($("gallery_kicker"))  $("gallery_kicker").textContent = kicker;
-      if ($("gallery_heading")) $("gallery_heading").textContent = heading;
-      if ($("gallery_text"))    $("gallery_text").textContent   = text;
-    }
+        // Grid
+        const grid = $("gallery_grid");
+        if (grid) {
+          if (images.length === 0) {
+            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; opacity:0.5; padding:40px;">No photos yet.</div>`;
+          } else {
+            grid.innerHTML = images.map(r => {
+              const artistName = teamMap.get(r.team_member_id);
+              const tag = artistName ? `Cut by ${artistName.split(' ')[0]}` : (r.caption || "");
+              return `
+                <div class="den-photo" style="background-image:url('${r.image_url}')">
+                  ${tag ? `<div class="photo-tag">${tag}</div>` : ''}
+                </div>`;
+            }).join("");
+          }
+        }
 
-    /* ---------- INIT ---------- */
-    (async () => {
-      const NS = window.NS;
-      const sb = supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
-
-      nsWireHeaderNav();
-
-      if (!NS.BUSINESS_SLUG) {
-        if (window.lucide) lucide.createIcons();
-        return;
+        $("main-content").style.opacity = "1";
       }
 
-      // 1) Get Business
-      const { data: biz, error: bErr } = await sb
-        .schema("public")
-        .from("business")
-        .select("id, team_json")
-        .eq("slug", NS.BUSINESS_SLUG)
-        .maybeSingle();
+      async function init() {
+        if (!NS.SLUG) { if($("site-error")) $("site-error").style.display = "block"; return; }
+        
+        const { data: biz } = await sb.from("business").select("*").eq("slug", NS.SLUG).maybeSingle();
+        if (!biz) { if($("site-error")) $("site-error").style.display = "block"; return; }
 
-      if (bErr || !biz) {
-        if (window.lucide) lucide.createIcons();
-        return;
+        window.NS_BUSINESS_ID = biz.id;
+
+        const [siteRes, imgRes, teamRes] = await Promise.all([
+          sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", NS.TEMPLATE).maybeSingle(),
+          sb.from("gallery_image").select("*").eq("business_id", biz.id).eq("type", "shop").eq("is_profile", false).order("created_at", { ascending: false }),
+          sb.from("team_members").select("id, name").eq("business_id", biz.id).eq("is_active", true)
+        ]);
+
+        const teamMap = new Map((teamRes.data || []).map(m => [m.id, m.name]));
+        apply(siteRes.data?.content_json || {}, biz, imgRes.data || [], teamMap);
       }
-
-      const teamMap = buildTeamMap(biz.team_json);
-
-      // 2) Get Site Content
-      const { data: site } = await sb
-        .schema("public")
-        .from("business_sites")
-        .select("content_json")
-        .eq("business_id", biz.id)
-        .eq("template_key", NS.TEMPLATE_KEY)
-        .maybeSingle();
-
-      applyGalleryContent(site?.content_json || {});
-
-      // 3) Get Gallery Rows (FIXED: Removing is_active, using type check)
-      const { data: rows, error: gErr } = await sb
-        .schema("public")
-        .from("gallery_image")
-        .select("id, image_url, team_member_id, caption, type, is_profile, created_at")
-        .eq("business_id", biz.id)
-        .eq("type", "shop")       // ✅ Matches allowed check constraint
-        .eq("is_profile", false)  // ✅ Matches boolean default
-        .order("created_at", { ascending: false });
-
-      if (gErr) console.error("Gallery load error:", gErr);
-
-      renderGallery(rows || [], teamMap);
-
-      if (window.lucide) lucide.createIcons();
+      init();
     })();
   </script>
-
-  <script src="/assets/js/netstudio_booking.js"></script>
 </body>
 </html>
