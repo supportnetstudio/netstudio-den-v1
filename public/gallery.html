@@ -172,29 +172,21 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /* --- NAV REWRITER (WORKER READY) --- */
+    /* --- NAV REWRITER --- */
     function nsGetSlugFromHost() {
-      // 1) Preview / Pages / local fallback: ?b=slug
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return String(qp).trim().toLowerCase();
   
-      // 2) Production: slug.netstudiodevelopment.com
       const host = (location.hostname || "").toLowerCase();
-  
-      // Ignore obvious non-slug hosts
       if (!host || host === "localhost" || host.startsWith("127.")) return null;
   
-      // If we're on the main domain, no slug
       const ROOT = "netstudiodevelopment.com";
       if (host === ROOT || host === "www." + ROOT) return null;
   
-      // If it's a subdomain of ROOT, first label is the slug
       if (host.endsWith("." + ROOT)) {
         const slug = host.slice(0, -(ROOT.length + 1)).split(".")[0];
         return slug || null;
       }
-  
-      // Otherwise unknown host: no slug
       return null;
     }
   
@@ -211,12 +203,8 @@
     function nsLinkWithSlug(targetPath) {
       const slug = nsGetSlugFromHost();
       if (!slug) return targetPath;
-  
-      // Production: clean paths, no ?b=
       if (!nsShouldUseQuerySlug()) return targetPath;
   
-      // Preview: keep ?b=slug
-      // Use location.origin to avoid relative path issues
       const u = new URL(targetPath, location.origin);
       u.searchParams.set("b", slug);
       return u.pathname + "?" + u.searchParams.toString() + u.hash;
@@ -228,12 +216,7 @@
 
       document.querySelectorAll("a.nav-link[data-page]").forEach(a => {
         const page = (a.getAttribute("data-page") || "home").toLowerCase();
-
-        const path =
-          page === "home" ? "/" :
-          page.startsWith("/") ? page :
-          "/" + page;
-
+        const path = page === "home" ? "/" : page.startsWith("/") ? page : "/" + page;
         a.setAttribute("href", nsLinkWithSlug(path));
 
         const current = (location.pathname || "/").replace(/\/+$/, "") || "/";
@@ -267,7 +250,6 @@
     }
 
     function buildTeamMap(teamJson){
-      // team_json expected to be array of members
       const arr = Array.isArray(teamJson) ? teamJson : [];
       const map = new Map();
       arr.forEach(m => {
@@ -279,16 +261,10 @@
     }
 
     function overlayForRow(row, teamMap){
-      // If tied to a team member: "Cut by Name"
       const tmId = normalizeId(row?.team_member_id);
       const tmName = tmId ? teamMap.get(tmId) : "";
       if (tmName) return `Cut by ${tmName}`;
-
-      // else fallback to caption (if you want)
-      const cap = pick(row?.caption, "");
-      if (cap) return cap;
-
-      return "";
+      return pick(row?.caption, "");
     }
 
     function renderGallery(rows, teamMap){
@@ -298,7 +274,6 @@
 
       const list = Array.isArray(rows) ? rows : [];
 
-      // If empty, you can show nothing (clean) OR show placeholders. Keeping it clean:
       if (list.length === 0) {
         grid.innerHTML = `<div style="color:rgba(255,255,255,.65); text-align:center; grid-column:1/-1; padding: 40px 0;">
           No gallery images yet.
@@ -324,8 +299,6 @@
     function applyGalleryContent(contentJson){
       const c = contentJson || {};
       const g = c.gallery || {};
-
-      // defaults match your hardcoded ones
       const kicker  = pick(g.kicker, "Our Work");
       const heading = pick(g.heading, "Fresh Cuts & Fades");
       const text    = pick(g.text, "Real clients. Real results. No filters. Hover over an image to see the detail.");
@@ -343,14 +316,13 @@
       nsWireHeaderNav();
 
       if (!NS.BUSINESS_SLUG) {
-        // no slug = nothing to load; leave defaults
         if (window.lucide) lucide.createIcons();
         return;
       }
 
-      // 1) get business (need id + team_json)
+      // 1) Get Business
       const { data: biz, error: bErr } = await sb
-        .schema("public") // Force public schema
+        .schema("public")
         .from("business")
         .select("id, team_json")
         .eq("slug", NS.BUSINESS_SLUG)
@@ -363,9 +335,9 @@
 
       const teamMap = buildTeamMap(biz.team_json);
 
-      // 2) get site content_json for gallery headings
+      // 2) Get Site Content
       const { data: site } = await sb
-        .schema("public") // Force public schema
+        .schema("public")
         .from("business_sites")
         .select("content_json")
         .eq("business_id", biz.id)
@@ -374,15 +346,14 @@
 
       applyGalleryContent(site?.content_json || {});
 
-      // 3) get gallery rows
-      // ✅ PATCH: Filter by type='shop' and is_profile=false (No 'is_active' column)
+      // 3) Get Gallery Rows (FIXED: Removing is_active, using type check)
       const { data: rows, error: gErr } = await sb
         .schema("public")
         .from("gallery_image")
         .select("id, image_url, team_member_id, caption, type, is_profile, created_at")
         .eq("business_id", biz.id)
-        .eq("type", "shop")
-        .eq("is_profile", false)
+        .eq("type", "shop")       // ✅ Matches allowed check constraint
+        .eq("is_profile", false)  // ✅ Matches boolean default
         .order("created_at", { ascending: false });
 
       if (gErr) console.error("Gallery load error:", gErr);
