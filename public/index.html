@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>The Den Barbershop — Net Studio Template</title>
+  <title>Barbershop — Powered by Net Studio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -121,8 +121,10 @@
   </style>
 
   <script>
-    window.openBooking = window.openBooking || function () { console.warn("Booking engine not yet loaded."); };
-    window.closeBooking = window.closeBooking || function () {};
+    window.openBooking = window.nsOpenBooking = function (p = {}) {
+      if (window.NetStudio && typeof window.NetStudio.open === "function") return window.NetStudio.open(p);
+      console.warn("Booking engine loading...");
+    };
   </script>
 </head>
 <body id="home">
@@ -145,7 +147,7 @@
             <a class="nav-link" href="/gallery" data-page="gallery">Gallery</a>
             <a class="nav-link" href="/team" data-page="team">Team</a>
             <a class="nav-link" href="/contact" data-page="contact">Contact</a>
-            <a href="#" onclick="openBooking(); return false;" class="btn" style="padding: 8px 16px; font-size: 11px;">Book Now</a>
+            <a href="#" onclick="nsOpenBooking(); return false;" class="btn" style="padding: 8px 16px; font-size: 11px;">Book Now</a>
           </nav>
         </div>
       </header>
@@ -155,7 +157,7 @@
           <span class="section-title" id="hero_kicker">Established 2025</span>
           <h1 id="hero_title">Everybody's<br>Barber Shop</h1>
           <p id="hero_sub">"It feels like back home in here."<br>Traditional cuts, modern vibe.</p>
-          <a id="hero_cta" href="#" onclick="openBooking(); return false;" class="btn">
+          <a id="hero_cta" href="#" onclick="nsOpenBooking(); return false;" class="btn">
             <i data-lucide="calendar"></i> <span id="hero_cta_text">Book Appointment</span>
           </a>
         </div>
@@ -206,10 +208,7 @@
             <div style="border-top:1px solid var(--glass-border); padding-top:20px;">
               <span class="section-title" id="hours_kicker">Opening Hours</span>
               <div id="hours_list">
-                <div class="hours-row"><span class="hours-day">Mon - Fri</span><span class="hours-time">9:00 AM - 7:00 PM</span></div>
-                <div class="hours-row"><span class="hours-day">Saturday</span><span class="hours-time">9:00 AM - 7:00 PM</span></div>
-                <div class="hours-row"><span class="hours-day">Sunday</span><span class="hours-time" style="color:var(--accent)">Closed</span></div>
-              </div>
+                </div>
             </div>
           </div>
         </div>
@@ -218,150 +217,90 @@
       <footer>
         <div class="container">
           <div id="footer_logo" style="font-weight:900; font-size:24px; margin-bottom:20px; text-transform:uppercase; font-style:italic;">THE <span style="color:var(--accent)">DEN</span></div>
-          <p>© 2026 <span id="copyright_name">The Den Barbershop</span>. Powered by Net Studio.</p>
+          <p id="footer_copy">© 2026 The Den Barbershop. Powered by Net Studio.</p>
         </div>
       </footer>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /* ================================
-       PROD-ONLY SLUG DETECTION
-       slug.netstudiodevelopment.com ONLY
-       - slug is first subdomain label
-       - NO query params
-       - NO pages.dev/workers.dev/localhost
-    ================================== */
     function nsDetectSlugProdOnly() {
       const ROOT = "netstudiodevelopment.com";
       const host = (location.hostname || "").toLowerCase();
-
-      // Must be a subdomain of ROOT, not ROOT itself
       if (!host || host === ROOT || host === "www." + ROOT) return null;
       if (!host.endsWith("." + ROOT)) return null;
-
-      // prefix = everything before .netstudiodevelopment.com
-      const prefix = host.slice(0, -(ROOT.length + 1)); // remove ".ROOT"
-      if (!prefix) return null;
-
-      // ENFORCE: slug is EXACTLY one label (no a.b.netstudiodevelopment.com)
-      if (prefix.includes(".")) return null;
-
-      const slug = prefix.trim();
-
-      // Basic slug validation
-      if (!/^[a-z0-9-]{2,64}$/.test(slug)) return null;
-
-      return slug;
+      const prefix = host.slice(0, -(ROOT.length + 1));
+      if (!prefix || prefix.includes(".")) return null;
+      return prefix.trim();
     }
 
-    /* --- DB CORE --- */
-    window.NS = {
-      SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
-      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-      BUSINESS_SLUG: nsDetectSlugProdOnly(),
-      TEMPLATE_KEY: "den_v1"
+    const NS = {
+      SB_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
+      SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
+      SLUG: nsDetectSlugProdOnly(),
+      TEMPLATE: "den_v1"
     };
 
     (() => {
-      const NS = window.NS;
-      const sb = supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
+      const sb = supabase.createClient(NS.SB_URL, NS.SB_KEY);
 
-      function nsDayOrder(d){
-        const m = { monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7 };
-        return m[String(d || "").toLowerCase()] || 99;
-      }
-      function nsFmtTime(t){
-        if (!t) return "";
-        const parts = String(t).split(":");
-        const hh = parseInt(parts[0] || "0", 10);
-        const mm = parts[1] || "00";
-        const ampm = hh >= 12 ? "PM" : "AM";
-        const h12 = ((hh + 11) % 12) + 1;
-        return `${h12}:${mm} ${ampm}`;
-      }
-      function nsDayLabel(d){
-        const x = String(d || "").toLowerCase();
-        return x ? x.charAt(0).toUpperCase() + x.slice(1) : "";
-      }
+      function nsDayOrder(d){ return { monday:1, tuesday:2, wednesday:3, thursday:4, friday:5, saturday:6, sunday:7 }[String(d||"").toLowerCase()] || 99; }
+      function nsFmtTime(t){ if (!t) return ""; const parts = String(t).split(":"); const hh = parseInt(parts[0], 10); const mm = parts[1] || "00"; const ampm = hh >= 12 ? "PM" : "AM"; const h12 = ((hh + 11) % 12) + 1; return `${h12}:${mm} ${ampm}`; }
 
-      function renderHoursFromRows(rows){
-        const el = document.getElementById("hours_list");
-        if (!el || !rows || !rows.length) return;
-        const sorted = [...rows].sort((a,b) => nsDayOrder(a.day_of_week) - nsDayOrder(b.day_of_week));
-        el.innerHTML = sorted.map(r => {
-          const day = nsDayLabel(r.day_of_week);
-          const closed = !!r.is_closed || !r.open_time || !r.close_time;
-          const time = closed ? "Closed" : `${nsFmtTime(r.open_time)} - ${nsFmtTime(r.close_time)}`;
-          return `<div class="hours-row"><span class="hours-day">${day}</span><span class="hours-time" ${closed ? `style="color:var(--accent)"` : ""}>${time}</span></div>`;
-        }).join("");
-      }
-
-      async function loadHours(businessId){
-        const { data, error } = await sb
-          .from("business_hours")
-          .select("day_of_week, open_time, close_time, is_closed")
-          .eq("business_id", businessId);
-
-        return error ? null : data;
-      }
-
-      function apply(data) {
-        const c = data || {};
+      function apply(data, biz) {
         const $ = (id) => document.getElementById(id);
-        const pick = (...vals) => {
-          for (const v of vals) { if (v !== undefined && v !== null && String(v).trim() !== "") return v; }
-          return "";
-        };
+        const pick = (...vals) => vals.find(v => v !== undefined && v !== null && String(v).trim() !== "") || "";
 
-        const home = c.home || {};
-        const heroN = home.hero || {};
-        const ctaN  = home.primary_cta || {};
+        // Standardized Paths from Master Schema
+        const home = data.home || {};
+        const hero = home.hero || {};
+        const intro = home.intro || {};
+        const extra = home.section_extra || {};
 
-        const name = pick(c.name, home.name);
-        
-        // ✅ PATCHED BLOCK START
-        if (name) {
-          document.title = `${name} — Net Studio Template`;
+        // 1. GLOBAL IDENTITY
+        const bName = biz.name || "Barbershop";
+        document.title = `${bName} — Net Studio`;
+        const names = String(bName).trim().split(/\s+/);
+        const logoHTML = names.length > 1 ? `${names[0]} <span>${names.slice(1).join(" ")}</span>` : names[0];
+        if ($("header_logo")) $("header_logo").innerHTML = logoHTML;
+        if ($("footer_logo")) $("footer_logo").innerHTML = logoHTML;
+        if ($("visit_name")) $("visit_name").textContent = bName;
+        if ($("footer_copy")) $("footer_copy").textContent = `© ${new Date().getFullYear()} ${bName}. Powered by Net Studio.`;
 
-          const names = String(name).trim().split(/\s+/);
-          const logoHTML = names.length > 1 ? `${names[0]} <span>${names.slice(1).join(" ")}</span>` : names[0];
-          if ($("header_logo")) $("header_logo").innerHTML = logoHTML;
-          if ($("footer_logo")) $("footer_logo").innerHTML = logoHTML;
-          if ($("copyright_name")) $("copyright_name").textContent = name;
-          if ($("visit_name")) $("visit_name").textContent = name;
+        // 2. HERO (Master Schema: home.hero)
+        const heroEl = document.querySelector(".hero");
+        const hBg = pick(hero.bg_image, biz.hero_bg_url);
+        if (hBg && heroEl) heroEl.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${hBg}')`;
+        if ($("hero_kicker")) $("hero_kicker").innerHTML = pick(hero.kicker, "ESTABLISHED 2025");
+        if ($("hero_title")) $("hero_title").innerHTML = pick(hero.headline, "Everybody's<br>Barber Shop");
+        if ($("hero_sub")) $("hero_sub").innerHTML = pick(hero.subheadline, "Traditional cuts, modern vibe.");
+        if ($("hero_cta_text")) $("hero_cta_text").textContent = pick(hero.primary_cta?.text, "Book Appointment");
+
+        // 3. ABOUT (Master Schema: home.intro)
+        if ($("about_kicker")) $("about_kicker").textContent = pick(intro.kicker, "About Us");
+        if ($("about_heading")) $("about_heading").textContent = pick(intro.headline, "A Back Home Kinda Thang");
+        if ($("about_text")) $("about_text").textContent = pick(intro.body, biz.bio);
+
+        // 4. HIRING / EXTRA (Master Schema: home.section_extra)
+        const hiringEl = $("hiring_card");
+        if (hiringEl) {
+          hiringEl.style.display = extra.show === false ? "none" : "block";
+          if ($("hiring_kicker")) $("hiring_kicker").textContent = pick(extra.kicker, "Join The Team");
+          if ($("hiring_title")) $("hiring_title").textContent = pick(extra.headline, "We Are Hiring");
+          if ($("hiring_text")) $("hiring_text").textContent = pick(extra.body, "Looking for a chair?");
+          if ($("hiring_cta_text")) $("hiring_cta_text").textContent = pick(extra.cta1?.text, "Apply Here");
+          if ($("hiring_cta")) $("hiring_cta").href = pick(extra.cta1?.link, "/contact");
         }
-        // ✅ PATCHED BLOCK END
 
-        const hero = document.querySelector(".hero");
-        const heroBg = pick(c.hero_bg, heroN.bg);
-        if (heroBg && hero) hero.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${heroBg}')`;
-
-        if ($("hero_kicker")) $("hero_kicker").innerHTML = pick(c.hero_kicker, heroN.kicker, "Established 2025");
-        if ($("hero_title"))  $("hero_title").innerHTML  = pick(c.hero_title,  heroN.title,  "Everybody's<br>Barber Shop");
-        if ($("hero_sub"))    $("hero_sub").innerHTML    = pick(c.hero_sub,    heroN.subtitle, `"It feels like back home in here."<br>Traditional cuts, modern vibe.`);
-        if ($("hero_cta_text")) $("hero_cta_text").textContent = pick(c.hero_cta_text, ctaN.text, "Book Appointment");
-        if ($("hero_cta")) $("hero_cta").setAttribute("href", pick(c.hero_cta_href, ctaN.href, "#"));
-
-        if ($("about_kicker"))  $("about_kicker").textContent  = pick(c.about_kicker, "About Us");
-        if ($("about_heading")) $("about_heading").textContent = pick(c.about_heading, "A Back Home Kinda Thang");
-        if ($("about_text")) $("about_text").textContent = pick(c.about_text, c.about, $("about_text").textContent);
-
-        const hiringEnabled = (c.hiring_enabled === undefined) ? true : !!c.hiring_enabled;
-        if ($("hiring_card")) $("hiring_card").style.display = hiringEnabled ? "" : "none";
-        if ($("hiring_kicker")) $("hiring_kicker").textContent = pick(c.hiring_kicker, "Join The Team");
-        if ($("hiring_title"))  $("hiring_title").textContent  = pick(c.hiring_title,  "We Are Hiring Barbers");
-        if ($("hiring_text"))   $("hiring_text").textContent   = pick(c.hiring_text,   "Looking for a chair in a high-traffic shop with a great culture?");
-        if ($("hiring_cta_text")) $("hiring_cta_text").textContent = pick(c.hiring_cta_text, "Apply Here");
-        if ($("hiring_cta")) $("hiring_cta").setAttribute("href", pick(c.hiring_cta_href, "#"));
-
-        if ($("visit_kicker")) $("visit_kicker").textContent = pick(c.visit_kicker, "Visit Us");
-        const addrHTML = pick(c.address_html, "");
-        if ($("visit_address")) $("visit_address").innerHTML = addrHTML || pick(c.address, "");
-        if ($("visit_phone")) $("visit_phone").textContent = pick(c.phone, "");
-
-        if (c.map_q && $("visit_map")) {
-          $("visit_map").src = `https://maps.google.com/maps?q=${encodeURIComponent(c.map_q)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
+        // 5. CONTACT (From Business Table)
+        const address = [biz.street_address, biz.city, biz.state].filter(Boolean).join(", ");
+        if ($("visit_address")) $("visit_address").innerHTML = address || "Location coming soon.";
+        if ($("visit_phone")) $("visit_phone").textContent = biz.phone || "";
+        if (biz.phone) $("visit_phone").parentElement.style.display = "flex";
+        
+        const q = biz.map_query || address;
+        if (q && $("visit_map")) {
+          $("visit_map").src = `http://googleusercontent.com/maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
         }
 
         if (window.lucide) lucide.createIcons();
@@ -369,39 +308,30 @@
       }
 
       async function init() {
-        // HARD FAIL if not slug.netstudiodevelopment.com
-        if (!NS.BUSINESS_SLUG) {
-          document.getElementById("site-error").style.display = "block";
-          return;
-        }
+        if (!NS.SLUG) { $("site-error").style.display = "block"; return; }
 
-        // BUSINESS LOOKUP: business.slug === detected_slug
-        const { data: biz, error } = await sb
-          .from("business")
-          .select("id")
-          .eq("slug", NS.BUSINESS_SLUG)
-          .maybeSingle();
+        const { data: biz } = await sb.from("business").select("*").eq("slug", NS.SLUG).maybeSingle();
+        if (!biz) { $("site-error").style.display = "block"; return; }
 
-        if (error || !biz) {
-          document.getElementById("site-error").style.display = "block";
-          return;
-        }
-
-        document.body.dataset.businessId = biz.id;
+        // Context for booking engine
+        window.NS_BUSINESS_ID = biz.id;
 
         const [siteRes, hoursRes] = await Promise.all([
-          sb.from("business_sites")
-            .select("content_json")
-            .eq("business_id", biz.id)
-            .eq("template_key", NS.TEMPLATE_KEY)
-            .maybeSingle(),
-          loadHours(biz.id)
+          sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", NS.TEMPLATE).maybeSingle(),
+          sb.from("business_hours").select("*").eq("business_id", biz.id)
         ]);
 
-        apply(siteRes.data?.content_json || {});
-        renderHoursFromRows(hoursRes || []);
-      }
+        // Render Hours
+        const hList = $("hours_list");
+        if (hList && hoursRes.data) {
+          hList.innerHTML = hoursRes.data.sort((a,b) => nsDayOrder(a.day_of_week) - nsDayOrder(b.day_of_week)).map(r => {
+            const closed = !!r.is_closed;
+            return `<div class="hours-row"><span class="hours-day">${r.day_of_week.charAt(0).toUpperCase()+r.day_of_week.slice(1)}</span><span class="hours-time" ${closed ? 'style="color:var(--accent)"':''}>${closed ? "Closed" : nsFmtTime(r.open_time)+" - "+nsFmtTime(r.close_time)}</span></div>`;
+          }).join("");
+        }
 
+        apply(siteRes.data?.content_json || {}, biz);
+      }
       init();
     })();
   </script>
