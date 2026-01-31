@@ -140,7 +140,7 @@
         font-size: 10px;
       }
 
-      body { padding-top: 140px; } 
+      body { padding-top: 140px; } /* Increased for taller mobile header */
     }
 
     /* --- SERVICE LIST STYLES --- */
@@ -181,10 +181,6 @@
       .service-item { flex-direction: column; align-items: flex-start; gap: 15px; }
       .svc-right { width: 100%; justify-content: space-between; }
     }
-    
-    /* Notice Box hidden by default until loaded to prevent flash */
-    #noticeBox { display: none; }
-    #noticeBox.visible { display: block; }
   </style>
 
   <script>
@@ -213,14 +209,17 @@
   </header>
 
   <main class="container" style="margin-top: 40px;">
-    <span class="section-title" id="svcKicker"></span>
-    <h2 id="svcHeading"></h2>
+    <span class="section-title">The Menu</span>
+    <h2>Service Price List</h2>
 
     <div id="servicesMount"></div>
 
-    <div id="noticeBox" style="background: rgba(239, 68, 68, 0.05); border: 1px dashed var(--accent); border-radius: 12px; padding: 30px; text-align: center; margin-top: 60px;">
-      <h3 id="svcNoticeTitle" style="color: var(--accent); font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.1em;"></h3>
-      <p id="svcNoticeText" style="font-size: 13px; color: var(--text-muted); max-width: 600px; margin: 0 auto; white-space: pre-line;"></p>
+    <div style="background: rgba(239, 68, 68, 0.05); border: 1px dashed var(--accent); border-radius: 12px; padding: 30px; text-align: center; margin-top: 60px;">
+      <h3 style="color: var(--accent); font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.1em;">Walk-Ins Welcome</h3>
+      <p style="font-size: 13px; color: var(--text-muted); max-width: 600px; margin: 0 auto;">
+        Appointments are prioritized. Walk-ins will be served based on availability.
+        <br><strong>Open Mon-Sat. Closed Sunday.</strong>
+      </p>
     </div>
   </main>
 
@@ -232,25 +231,46 @@
   </footer>
 
   <script>
-    /* --- NAV REWRITER --- */
+    /* --- NAV REWRITER (WORKER READY) --- */
     function nsGetSlugFromHost() {
+      // 1) Preview / Pages / local fallback: ?b=slug
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return String(qp).trim().toLowerCase();
+  
+      // 2) Production: slug.netstudiodevelopment.com
       const host = (location.hostname || "").toLowerCase();
-      if (!host || host === "localhost" || host.startsWith("127.") || host === "netstudiodevelopment.com" || host === "www.netstudiodevelopment.com") return null;
-      if (host.endsWith(".netstudiodevelopment.com")) return host.slice(0, -26).split(".")[0] || null;
+  
+      if (!host || host === "localhost" || host.startsWith("127.")) return null;
+  
+      const ROOT = "netstudiodevelopment.com";
+      if (host === ROOT || host === "www." + ROOT) return null;
+  
+      if (host.endsWith("." + ROOT)) {
+        const slug = host.slice(0, -(ROOT.length + 1)).split(".")[0];
+        return slug || null;
+      }
+  
       return null;
     }
   
     function nsShouldUseQuerySlug() {
       const host = (location.hostname || "").toLowerCase();
-      return (host.endsWith(".pages.dev") || host.endsWith(".workers.dev") || host === "localhost" || host.startsWith("127."));
+      return (
+        host.endsWith(".pages.dev") ||
+        host.endsWith(".workers.dev") ||
+        host === "localhost" ||
+        host.startsWith("127.")
+      );
     }
   
     function nsLinkWithSlug(targetPath) {
       const slug = nsGetSlugFromHost();
       if (!slug) return targetPath;
+  
+      // Production: clean paths, no ?b=
       if (!nsShouldUseQuerySlug()) return targetPath;
+  
+      // Preview: keep ?b=slug
       const u = new URL(targetPath, location.href);
       u.searchParams.set("b", slug);
       return u.pathname + "?" + u.searchParams.toString() + u.hash;
@@ -260,6 +280,7 @@
       document.querySelectorAll("a.nav-link[data-page]").forEach(a => {
         const page = a.getAttribute("data-page") || a.getAttribute("href") || "index.html";
         a.setAttribute("href", nsLinkWithSlug(page));
+  
         const current = (location.pathname.split("/").pop() || "index.html").toLowerCase();
         a.classList.toggle("active", page.toLowerCase() === current);
       });
@@ -283,56 +304,46 @@
 
     async function nsLoadBusinessId() {
       if (!window.NS.BUSINESS_SLUG) return null;
-      const { data, error } = await sb.from("business").select("id").eq("slug", window.NS.BUSINESS_SLUG).maybeSingle();
+      const { data, error } = await sb
+        .from("business")
+        .select("id")
+        .eq("slug", window.NS.BUSINESS_SLUG)
+        .maybeSingle();
       if (error || !data) return null;
       window.BUSINESS_ID = data.id;
+      document.body.dataset.businessId = data.id;
       return data.id;
     }
 
     async function nsLoadBusinessBranding() {
       if (!window.NS.BUSINESS_SLUG) return;
-      const { data, error } = await sb.from("business").select("name, logo_url").eq("slug", window.NS.BUSINESS_SLUG).maybeSingle();
+
+      const { data, error } = await sb
+        .from("business")
+        .select("name, logo_url")
+        .eq("slug", window.NS.BUSINESS_SLUG)
+        .maybeSingle();
+
       if (error || !data) return;
-      const logoHTML = data.logo_url ? `<img src="${data.logo_url}" alt="${data.name}" style="height:34px; max-width:180px; object-fit:contain;">` : `<span>${data.name.toUpperCase()}</span>`;
+
       const wrap = document.getElementById("nsLogoWrap");
       const footerWrap = document.getElementById("nsFooterLogo");
+      
+      const logoHTML = data.logo_url 
+        ? `<img src="${data.logo_url}" alt="${data.name}" style="height:34px; max-width:180px; object-fit:contain;">`
+        : `<span>${data.name.toUpperCase()}</span>`;
+
       if (wrap) wrap.innerHTML = logoHTML;
       if (footerWrap) footerWrap.innerHTML = logoHTML;
     }
 
-    // ✅ PATCH 3: PUBLIC SERVICES PAGE READER
-    async function nsLoadSiteContent() {
-      if (!window.BUSINESS_ID) return;
-      
-      // 1. Resolve Active Template (default to den_v1 if missing)
-      let { data: ptr } = await sb.from('business_sites_one').select('active_template_key').eq('business_id', window.BUSINESS_ID).maybeSingle();
-      const key = ptr?.active_template_key || 'den_v1';
-
-      // 2. Fetch Content
-      const { data: site } = await sb.from('business_sites').select('content_json').eq('business_id', window.BUSINESS_ID).eq('template_key', key).maybeSingle();
-      
-      // 3. Extract & Render
-      const s = site?.content_json?.services || {};
-      const intro = s.intro || {};
-      const notice = s.notice || {};
-
-      document.getElementById('svcKicker').textContent = intro.kicker || "";
-      document.getElementById('svcHeading').textContent = intro.heading || "";
-      
-      const nTitle = notice.title || "";
-      const nText = notice.text || "";
-      
-      // Only show Notice Box if content exists
-      if (nTitle || nText) {
-        document.getElementById('svcNoticeTitle').textContent = nTitle;
-        document.getElementById('svcNoticeText').textContent = nText;
-        document.getElementById('noticeBox').classList.add('visible');
-      }
-    }
-
     async function loadMenuItems() {
       if (!window.BUSINESS_ID) return;
-      const { data, error } = await sb.from("menu_items").select("*").eq("business_id", window.BUSINESS_ID).eq("is_active", true);
+      const { data, error } = await sb
+        .from("menu_items")
+        .select("*")
+        .eq("business_id", window.BUSINESS_ID)
+        .eq("is_active", true);
       if (error) return;
       renderMenuItems(data || []);
     }
@@ -346,7 +357,10 @@
         return;
       }
       const groups = {};
-      items.forEach(i => { const cat = (i.category || "Other").trim(); (groups[cat] ||= []).push(i); });
+      items.forEach(i => {
+        const cat = (i.category || "Other").trim();
+        (groups[cat] ||= []).push(i);
+      });
       Object.entries(groups).forEach(([cat, svcs]) => {
         const catBlock = document.createElement("div");
         catBlock.className = "service-category";
@@ -373,7 +387,6 @@
       const id = await nsLoadBusinessId();
       if (id) {
         await nsLoadBusinessBranding();
-        await nsLoadSiteContent(); // ✅ Patch 3 Trigger
         await loadMenuItems();
         nsLoadBookingScript();
       }
@@ -381,3 +394,6 @@
   </script>
 </body>
 </html>
+
+
+internalize this page
