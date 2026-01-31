@@ -120,6 +120,108 @@
     #site-error { display: none; text-align: center; padding: 100px 20px; color: #666; font-size: 14px; }
   </style>
 
+  <script>
+    window.openBooking = window.nsOpenBooking = function (p = {}) {
+      if (window.NetStudio && typeof window.NetStudio.open === "function") return window.NetStudio.open(p);
+      console.warn("Booking engine loading...");
+    };
+  </script>
+</head>
+<body id="home">
+
+  <div id="nsdBusiness" data-business-id="" style="display:none"></div>
+
+  <div id="site-error">
+    <h2>404</h2>
+    <p>We couldn't find a barbershop at this address.</p>
+  </div>
+
+  <div id="main-content" style="opacity: 0; transition: opacity 0.5s ease;">
+      <header>
+        <div class="container nav-wrap">
+          <a href="/" class="logo" id="header_logo">THE <span>DEN</span></a>
+          <nav class="nav-links" aria-label="Primary">
+            <a class="nav-link" href="/" data-page="home">Home</a>
+            <a class="nav-link" href="/about" data-page="about">About</a>
+            <a class="nav-link" href="/services" data-page="services">Services</a>
+            <a class="nav-link" href="/gallery" data-page="gallery">Gallery</a>
+            <a class="nav-link" href="/team" data-page="team">Team</a>
+            <a class="nav-link" href="/contact" data-page="contact">Contact</a>
+            <a href="#" onclick="nsOpenBooking(); return false;" class="btn" style="padding: 8px 16px; font-size: 11px;">Book Now</a>
+          </nav>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="hero-content">
+          <span class="section-title" id="hero_kicker">Established 2025</span>
+          <h1 id="hero_title">Everybody's<br>Barber Shop</h1>
+          <p id="hero_sub">"It feels like back home in here."<br>Traditional cuts, modern vibe.</p>
+          <a id="hero_cta" href="#" onclick="nsOpenBooking(); return false;" class="btn">
+            <i data-lucide="calendar"></i> <span id="hero_cta_text">Book Appointment</span>
+          </a>
+        </div>
+      </section>
+
+      <div class="container info-grid" id="about">
+        <div>
+          <span class="section-title" id="about_kicker">About Us</span>
+          <h2 id="about_heading">A Back Home Kinda Thang</h2>
+          <p id="about_text" style="color:var(--text-muted); margin-bottom:20px;">
+            At The Den Barbershop, we're more than just a place to get a haircut. 
+          </p>
+
+          <div class="glass-card" id="hiring_card" style="margin-top:40px;">
+            <span class="section-title" id="hiring_kicker">Join The Team</span>
+            <h3 id="hiring_title" style="font-size:24px; font-weight:800; margin-bottom:10px;">We Are Hiring Barbers</h3>
+            <p id="hiring_text" style="font-size:14px; color:var(--text-muted); margin-bottom:20px;">
+              Looking for a chair in a high-traffic shop with a great culture?
+            </p>
+            <a id="hiring_cta" class="btn" href="#" style="background:white; color:black;">
+              <span id="hiring_cta_text">Apply Here</span>
+            </a>
+          </div>
+        </div>
+
+        <div id="contact">
+          <div class="glass-card">
+            <span class="section-title" id="visit_kicker">Visit Us</span>
+            <div class="map-frame">
+              <iframe 
+                id="visit_map" 
+                width="100%" height="100%" 
+                frameborder="0" style="border:0" 
+                loading="lazy"
+                src="">
+              </iframe>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <div id="visit_name" style="font-weight:700; font-size:16px;">The Den Barbershop</div>
+                <div id="visit_address" style="font-size:14px; color:var(--text-muted);">3904 Bainbridge Blvd<br>Chesapeake, VA 23324</div>
+                <div style="margin-top:10px; display:flex; align-items:center; gap:8px; color:var(--accent); font-weight:700;">
+                  <i data-lucide="phone" style="width:14px"></i>
+                  <span id="visit_phone">757-543-2966</span>
+                </div>
+            </div>
+
+            <div style="border-top:1px solid var(--glass-border); padding-top:20px;">
+              <span class="section-title" id="hours_kicker">Opening Hours</span>
+              <div id="hours_list">
+                </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        <div class="container">
+          <div id="footer_logo" style="font-weight:900; font-size:24px; margin-bottom:20px; text-transform:uppercase; font-style:italic;">THE <span style="color:var(--accent)">DEN</span></div>
+          <p id="footer_copy">© 2026 The Den Barbershop. Powered by Net Studio.</p>
+        </div>
+      </footer>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     function nsDetectSlugProdOnly() {
@@ -190,13 +292,16 @@
         // ---------------------------------------------------------------------
         
         // HERO
+        // ✅ CRASH GUARD: Check for .style
         const heroEl = document.querySelector(".hero");
         const hBg = pick(
           hero.bg, 
           biz.hero_bg_url, 
           "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80&w=2000"
         );
-        if (hBg && heroEl) heroEl.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${hBg}')`;
+        if (hBg && heroEl && heroEl.style) {
+          heroEl.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${hBg}')`;
+        }
 
         if ($("hero_kicker")) $("hero_kicker").innerHTML = pick(
           hero.kicker, 
@@ -248,7 +353,6 @@
         // HIRING
         const hiringEl = $("hiring_card");
         if (hiringEl) {
-          // If explicitly false, hide. Otherwise show.
           const show = pick(extra.show, data.hiring_enabled, true); 
           if (show === false) hiringEl.style.display = "none";
           else hiringEl.style.display = "block";
@@ -264,8 +368,13 @@
         // VISIT (Business Data ONLY)
         const address = [biz.street_address, biz.city, biz.state].filter(Boolean).join(", ");
         if ($("visit_address")) $("visit_address").innerHTML = address || "Location coming soon.";
-        if ($("visit_phone")) $("visit_phone").textContent = biz.phone || "";
-        if (biz.phone && $("visit_phone")?.parentElement) $("visit_phone").parentElement.style.display = "flex";
+        
+        // ✅ CRASH GUARD: Phone Display
+        const vp = $("visit_phone");
+        if (vp) vp.textContent = biz.phone || "";
+        if (biz.phone && vp && vp.parentElement && vp.parentElement.style) {
+          vp.parentElement.style.display = "flex";
+        }
 
         const q = biz.map_query || address;
         if (q && $("visit_map")) {
@@ -273,7 +382,10 @@
         }
 
         if (window.lucide) lucide.createIcons();
-        document.getElementById("main-content").style.opacity = "1";
+        
+        // ✅ CRASH GUARD: Opacity
+        const main = document.getElementById("main-content");
+        if (main && main.style) main.style.opacity = "1";
       }
 
       async function init() {
@@ -289,6 +401,7 @@
         // -----------------------------------------------------------
         // 2️⃣ RESOLVE POINTER (business_sites_one)
         // -----------------------------------------------------------
+        // ✅ IDENTITY FIX: Fetch pointer before fetching content
         const { data: pointer } = await sb.from("business_sites_one").select("active_template_key").eq("business_id", biz.id).maybeSingle();
         const activeTemplate = pointer?.active_template_key || NS.FALLBACK;
 
@@ -299,6 +412,7 @@
         // 3️⃣ LOAD CONTENT (business_sites)
         // -----------------------------------------------------------
         const [siteRes, hoursRes] = await Promise.all([
+          // ✅ IDENTITY FIX: Query using the resolved pointer, never null
           sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", activeTemplate).maybeSingle(),
           sb.from("business_hours").select("*").eq("business_id", biz.id)
         ]);
