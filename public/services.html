@@ -209,14 +209,16 @@
   </header>
 
   <main class="container" style="margin-top: 40px;">
-    <span class="section-title">The Menu</span>
-    <h2>Service Price List</h2>
+    <span class="section-title" id="services_kicker">The Menu</span>
+    <h2 id="services_heading">Service Price List</h2>
 
     <div id="servicesMount"></div>
 
     <div style="background: rgba(239, 68, 68, 0.05); border: 1px dashed var(--accent); border-radius: 12px; padding: 30px; text-align: center; margin-top: 60px;">
-      <h3 style="color: var(--accent); font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.1em;">Walk-Ins Welcome</h3>
-      <p style="font-size: 13px; color: var(--text-muted); max-width: 600px; margin: 0 auto;">
+      <h3 id="services_notice_title" style="color: var(--accent); font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.1em;">
+        Walk-Ins Welcome
+      </h3>
+      <p id="services_notice_text" style="font-size: 13px; color: var(--text-muted); max-width: 600px; margin: 0 auto;">
         Appointments are prioritized. Walk-ins will be served based on availability.
         <br><strong>Open Mon-Sat. Closed Sunday.</strong>
       </p>
@@ -337,6 +339,36 @@
       if (footerWrap) footerWrap.innerHTML = logoHTML;
     }
 
+    // --- [PATCH] Content Applicator ---
+    function applyServicesContent(content) {
+      const services = content?.services;
+      if (!services) return;
+
+      // Intro
+      if (services.intro?.kicker) {
+        const el = document.getElementById("services_kicker");
+        if (el) el.textContent = services.intro.kicker;
+      }
+
+      if (services.intro?.heading) {
+        const el = document.getElementById("services_heading");
+        if (el) el.textContent = services.intro.heading;
+      }
+
+      // Notice
+      if (services.notice?.title) {
+        const el = document.getElementById("services_notice_title");
+        if (el) el.textContent = services.notice.title;
+      }
+
+      if (services.notice?.text) {
+        const el = document.getElementById("services_notice_text");
+        if (el) {
+          el.innerHTML = services.notice.text.replace(/\n/g, "<br>");
+        }
+      }
+    }
+
     async function loadMenuItems() {
       if (!window.BUSINESS_ID) return;
       const { data, error } = await sb
@@ -388,12 +420,22 @@
       if (id) {
         await nsLoadBusinessBranding();
         await loadMenuItems();
+        
+        // --- [PATCH] Fetch content_json for services page text ---
+        const { data: site } = await sb
+          .from("business_sites")
+          .select("content_json")
+          .eq("business_id", window.BUSINESS_ID)
+          .eq("template_key", "den_v1")
+          .maybeSingle();
+
+        if (site?.content_json) {
+          applyServicesContent(site.content_json);
+        }
+
         nsLoadBookingScript();
       }
     })();
   </script>
 </body>
 </html>
-
-
-internalize this page
