@@ -238,7 +238,7 @@
       SB_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
       SLUG: nsDetectSlugProdOnly(),
-      FALLBACK: "den_v1"
+      FALLBACK_TEMPLATE: "den_v1"
     };
 
     (() => {
@@ -288,7 +288,7 @@
         if ($("footer_copy")) $("footer_copy").textContent = `© ${new Date().getFullYear()} ${bName}. Powered by Net Studio.`;
 
         // ---------------------------------------------------------------------
-        // GREEDY READER: (Nested Canonical -> Legacy Flat -> Defaults)
+        // GREEDY READER
         // ---------------------------------------------------------------------
         
         // HERO
@@ -391,33 +391,24 @@
       async function init() {
         if (!NS.SLUG) { if($("site-error")) $("site-error").style.display = "block"; return; }
 
-        // -----------------------------------------------------------
-        // 1️⃣ RESOLVE BUSINESS
-        // -----------------------------------------------------------
+        // ✅ 1. FETCH BIZ
         const { data: biz } = await sb.from("business").select("*").eq("slug", NS.SLUG).maybeSingle();
         if (!biz) { if($("site-error")) $("site-error").style.display = "block"; return; }
         window.NS_BUSINESS_ID = biz.id;
 
-        // -----------------------------------------------------------
-        // 2️⃣ RESOLVE POINTER (business_sites_one)
-        // -----------------------------------------------------------
-        // ✅ IDENTITY FIX: Fetch pointer before fetching content
-        const { data: pointer } = await sb.from("business_sites_one").select("active_template_key").eq("business_id", biz.id).maybeSingle();
-        const activeTemplate = pointer?.active_template_key || NS.FALLBACK;
+        // ✅ 2. FETCH POINTER (from business_sites_one)
+        const { data: bso } = await sb.from("business_sites_one").select("active_template_key").eq("business_id", biz.id).maybeSingle();
+        const activeKey = (bso?.active_template_key || NS.FALLBACK_TEMPLATE || "den_v1").trim();
 
-        // Load booking engine
-        await nsLoadBookingEngine();
+        // ✅ 3. NON-BLOCKING BOOKING LOAD (fixes the white screen if 404)
+        nsLoadBookingEngine(); 
 
-        // -----------------------------------------------------------
-        // 3️⃣ LOAD CONTENT (business_sites)
-        // -----------------------------------------------------------
+        // ✅ 4. FETCH CONTENT
         const [siteRes, hoursRes] = await Promise.all([
-          // ✅ IDENTITY FIX: Query using the resolved pointer, never null
-          sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", activeTemplate).maybeSingle(),
+          sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", activeKey).maybeSingle(),
           sb.from("business_hours").select("*").eq("business_id", biz.id)
         ]);
 
-        // Render Hours
         const hList = $("hours_list");
         if (hList && hoursRes.data) {
           hList.innerHTML = hoursRes.data.sort((a,b) => nsDayOrder(a.day_of_week) - nsDayOrder(b.day_of_week)).map(r => {
@@ -427,9 +418,6 @@
           }).join("");
         }
 
-        // -----------------------------------------------------------
-        // 4️⃣ RENDER (Apply)
-        // -----------------------------------------------------------
         apply(siteRes.data?.content_json || {}, biz);
       }
       init();
