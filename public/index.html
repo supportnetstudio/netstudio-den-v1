@@ -238,7 +238,7 @@
       SB_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
       SLUG: nsDetectSlugProdOnly(),
-      TEMPLATE: "den_v1"
+      TEMPLATE: "den_v1" // Legacy fallback, overridden by biz.active_template_key
     };
 
     (() => {
@@ -353,7 +353,8 @@
       async function init() {
         if (!NS.SLUG) { if($("site-error")) $("site-error").style.display = "block"; return; }
 
-        const { data: biz } = await sb.from("business").select("*").eq("slug", NS.SLUG).maybeSingle();
+        // ✅ 1. FETCH BIZ + POINTER (Single Source of Truth)
+        const { data: biz } = await sb.from("business").select("*, active_template_key").eq("slug", NS.SLUG).maybeSingle();
         if (!biz) { if($("site-error")) $("site-error").style.display = "block"; return; }
 
         window.NS_BUSINESS_ID = biz.id;
@@ -362,7 +363,8 @@
         await nsLoadBookingEngine();
 
         const [siteRes, hoursRes] = await Promise.all([
-          sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", NS.TEMPLATE).maybeSingle(),
+          // ✅ 2. FETCH SITE ROW USING POINTER (No more hardcoding)
+          sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", biz.active_template_key).maybeSingle(),
           sb.from("business_hours").select("*").eq("business_id", biz.id)
         ]);
 
