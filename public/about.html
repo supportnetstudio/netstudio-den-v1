@@ -52,15 +52,22 @@
     .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; text-transform: uppercase; }
     .nav-links a.active { color: #fff; }
 
-    /* --- ABOUT CONTENT --- */
+    /* --- ABOUT CONTENT (PATCHED: IMAGE-FREE) --- */
     .about-hero { padding: 80px 0; text-align: center; }
     .section-title { font-size: 12px; color: var(--accent); letter-spacing: 0.2em; text-transform: uppercase; font-weight: 800; margin-bottom: 10px; display: block; }
     h1 { font-size: clamp(32px, 5vw, 48px); font-weight: 800; margin-bottom: 20px; }
-    .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; padding: 60px 0; align-items: center; }
-    .about-img { width: 100%; border-radius: 20px; border: 1px solid var(--glass-border); aspect-ratio: 4/5; object-fit: cover; }
+    
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 30px;
+      padding: 60px 0;
+      align-items: start;
+      max-width: 800px;
+      margin: 0 auto;
+    }
     
     @media (max-width: 768px) {
-      .about-grid { grid-template-columns: 1fr; gap: 30px; }
       body { padding-top: 120px; }
       .nav-wrap { flex-direction: column; height: auto; padding: 10px 0; }
     }
@@ -82,14 +89,14 @@
   <div id="main-content" style="opacity: 0; transition: opacity 0.5s ease;">
     <header>
       <div class="container nav-wrap">
-<a href="/" class="logo" id="header_logo">THE <span>DEN</span></a>
-<nav class="nav-links" aria-label="Primary">
-  <a class="nav-link" href="/" data-page="home">Home</a>
-  <a class="nav-link" href="/about" data-page="about">About</a>
-  <a class="nav-link" href="/services" data-page="services">Services</a>
-  <a class="nav-link" href="/gallery" data-page="gallery">Gallery</a>
-  <a href="#" class="btn" style="padding: 8px 16px; font-size: 11px;" onclick="openBooking(); return false;">Book Now</a>
-</nav>
+        <a href="/" class="logo" id="header_logo">THE <span>DEN</span></a>
+        <nav class="nav-links" aria-label="Primary">
+          <a class="nav-link" href="/" data-page="home">Home</a>
+          <a class="nav-link" href="/about" data-page="about">About</a>
+          <a class="nav-link" href="/services" data-page="services">Services</a>
+          <a class="nav-link" href="/gallery" data-page="gallery">Gallery</a>
+          <a href="#" class="btn" style="padding: 8px 16px; font-size: 11px;" onclick="openBooking(); return false;">Book Now</a>
+        </nav>
       </div>
     </header>
 
@@ -103,7 +110,6 @@
       </section>
 
       <div class="about-grid">
-        <img src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80&w=1000" alt="Barbershop interior" class="about-img" id="about_image_1">
         <div>
           <h2 style="font-size: 28px; margin-bottom: 20px;" id="about_story_title">The Neighborhood Spot</h2>
           <p style="color: var(--text-muted); margin-bottom: 20px;" id="about_story_text">
@@ -119,46 +125,30 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    /* --- NAV REWRITER (WORKER READY) --- */
+    /* --- NAV REWRITER --- */
     function nsGetSlugFromHost() {
-      // 1) Preview / Pages / local fallback: ?b=slug
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return String(qp).trim().toLowerCase();
-
-      // 2) Production: slug.netstudiodevelopment.com
       const host = (location.hostname || "").toLowerCase();
-
       if (!host || host === "localhost" || host.startsWith("127.")) return null;
-
       const ROOT = "netstudiodevelopment.com";
       if (host === ROOT || host === "www." + ROOT) return null;
-
       if (host.endsWith("." + ROOT)) {
         const slug = host.slice(0, -(ROOT.length + 1)).split(".")[0];
         return slug || null;
       }
-
       return null;
     }
 
     function nsShouldUseQuerySlug() {
       const host = (location.hostname || "").toLowerCase();
-      return (
-        host.endsWith(".pages.dev") ||
-        host.endsWith(".workers.dev") ||
-        host === "localhost" ||
-        host.startsWith("127.")
-      );
+      return (host.endsWith(".pages.dev") || host.endsWith(".workers.dev") || host === "localhost" || host.startsWith("127."));
     }
 
     function nsLinkWithSlug(targetPath) {
       const slug = nsGetSlugFromHost();
       if (!slug) return targetPath;
-
-      // Production: clean paths, no ?b=
       if (!nsShouldUseQuerySlug()) return targetPath;
-
-      // Preview: keep ?b=slug
       const u = new URL(targetPath, location.href);
       u.searchParams.set("b", slug);
       return u.pathname + "?" + u.searchParams.toString() + u.hash;
@@ -167,11 +157,9 @@
     function nsWireHeaderNav() {
       const logo = document.getElementById("header_logo");
       if (logo) logo.setAttribute("href", nsLinkWithSlug("index.html"));
-
       document.querySelectorAll("a.nav-link[data-page]").forEach(a => {
         const page = a.getAttribute("data-page") || a.getAttribute("href") || "index.html";
         a.setAttribute("href", nsLinkWithSlug(page));
-
         const current = (location.pathname.split("/").pop() || "index.html").toLowerCase();
         if (page.toLowerCase() === current) a.classList.add("active");
         else a.classList.remove("active");
@@ -185,7 +173,6 @@
       TEMPLATE_KEY: "den_v1"
     };
 
-    /* --- DATA LOADING --- */
     (() => {
       const NS = window.NS;
       const sb = supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
@@ -198,15 +185,12 @@
           return "";
         };
 
-        // ✅ About Page Specific Keys (Sync with nested & flat paths)
         const aboutN = c.about || {};
 
-        // HERO SECTION
         if ($("about_kicker"))  $("about_kicker").textContent = pick(c.about_kicker, aboutN.kicker, "Our Story");
         if ($("about_heading")) $("about_heading").textContent = pick(c.about_heading, aboutN.heading, "A Tradition of Excellence");
         if ($("about_text"))    $("about_text").textContent   = pick(c.about_text, aboutN.text, aboutN.body, $("about_text").textContent);
 
-        // ✅ STORY BLOCK (supports builder nested + flat)
         const storyN = aboutN.story || {};
 
         if ($("about_story_title")) {
@@ -221,9 +205,9 @@
 
         if ($("about_story_text")) {
           $("about_story_text").textContent = pick(
-            c.about_story_p1,          // builder flat mirror
-            c.about_story_text,        // legacy id mirror
-            storyN.p1,                 // ✅ builder nested
+            c.about_story_p1,
+            c.about_story_text,
+            storyN.p1,
             aboutN.story_text,
             aboutN.neighborhood_p1,
             $("about_story_text").textContent
@@ -232,18 +216,14 @@
 
         if ($("about_story_footer")) {
           $("about_story_footer").textContent = pick(
-            c.about_story_p2,          // builder flat mirror
-            c.about_story_footer,      // legacy id mirror
-            storyN.p2,                 // ✅ builder nested
+            c.about_story_p2,
+            c.about_story_footer,
+            storyN.p2,
             aboutN.story_footer,
             aboutN.neighborhood_p2,
             $("about_story_footer").textContent
           );
         }
-
-        // ✅ IMAGES
-        const img1 = pick(c.about_image_1, aboutN.image_1, aboutN.img_1, "");
-        if (img1 && $("about_image_1")) $("about_image_1").src = img1;
 
         document.getElementById("main-content").style.opacity = "1";
         if (window.lucide) lucide.createIcons();
@@ -251,31 +231,24 @@
 
       async function init() {
         const reveal = () => document.getElementById("main-content").style.opacity = "1";
-
         if (!NS.BUSINESS_SLUG) { 
             document.getElementById("site-error").style.display = "block"; 
             reveal();
             return; 
         }
-
         const { data: biz, error: bErr } = await sb.from("business").select("id").eq("slug", NS.BUSINESS_SLUG).maybeSingle();
-        
         if (bErr || !biz) { 
             document.getElementById("site-error").style.display = "block"; 
             reveal();
             return; 
         }
-
         const { data: site } = await sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", NS.TEMPLATE_KEY).maybeSingle();
-        
         nsWireHeaderNav();
         apply(site?.content_json || {});
       }
-
       init();
     })();
   </script>
-
   <script src="/assets/js/netstudio_booking.js"></script>
 </body>
 </html>
