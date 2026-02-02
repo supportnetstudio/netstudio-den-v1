@@ -28,31 +28,69 @@
       font-family: var(--font-body);
       line-height: 1.6;
       overflow-x: hidden;
-      padding-top: 80px;
+      /* Adjusted for the new dual-row nav height */
+      padding-top: 130px; 
     }
     .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
     .btn {
       display: inline-flex; align-items: center; gap: 8px;
       background: var(--accent); color: white;
-      padding: 12px 24px; border-radius: 99px;
+      padding: 10px 20px; border-radius: 99px;
       font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-      text-decoration: none; font-size: 12px; border: none; cursor: pointer;
+      text-decoration: none; font-size: 11px; border: none; cursor: pointer;
     }
 
-    /* --- HEADER --- */
+    /* --- UNIVERSAL NET STUDIO NAV --- */
     header {
-      position: fixed; top: 0; width: 100%; z-index: 100;
-      background: rgba(0,0,0,0.8); backdrop-filter: blur(12px);
+      position: fixed; top: 0; width: 100%; z-index: 1000;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--glass-border);
     }
-    .nav-wrap { display: flex; justify-content: space-between; align-items: center; height: 70px; }
-    .logo { font-weight: 900; font-size: 20px; text-transform: uppercase; letter-spacing: 0.1em; font-style: italic; text-decoration: none; color: inherit; }
+    .nav-top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      height: 64px; border-bottom: 1px solid var(--glass-border);
+    }
+    .logo { 
+      font-weight: 900; font-size: 18px; text-transform: uppercase; 
+      letter-spacing: 0.1em; font-style: italic; text-decoration: none; color: inherit; 
+    }
     .logo span { color: var(--accent); }
-    .nav-links { display: flex; gap: 24px; align-items: center; }
-    .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; text-transform: uppercase; }
-    .nav-links a.active { color: #fff; }
 
-    /* --- ABOUT CONTENT (PATCHED: IMAGE-FREE) --- */
+    .quick-actions-row {
+      padding: 12px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-start;
+    }
+    .action-pill {
+      flex: 0 0 auto;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 16px;
+      border-radius: 99px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      transition: all 0.2s ease;
+    }
+    .action-pill:hover {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+    .action-pill.active {
+      background: rgba(255,255,255,0.15);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* --- ABOUT CONTENT --- */
     .about-hero { padding: 80px 0; text-align: center; }
     .section-title { font-size: 12px; color: var(--accent); letter-spacing: 0.2em; text-transform: uppercase; font-weight: 800; margin-bottom: 10px; display: block; }
     h1 { font-size: clamp(32px, 5vw, 48px); font-weight: 800; margin-bottom: 20px; }
@@ -68,8 +106,9 @@
     }
     
     @media (max-width: 768px) {
-      body { padding-top: 120px; }
-      .nav-wrap { flex-direction: column; height: auto; padding: 10px 0; }
+      body { padding-top: 160px; }
+      .quick-actions-row { gap: 6px; }
+      .action-pill { padding: 0 12px; font-size: 11px; height: 36px; }
     }
     
     #site-error { display: none; text-align: center; padding: 100px 20px; }
@@ -77,9 +116,10 @@
 
   <script>
     window.openBooking = window.openBooking || function () { console.warn("Booking engine not yet loaded."); };
+    const NS_PAGE = "about";
   </script>
 </head>
-<body>
+<body data-page="about">
 
   <div id="site-error">
     <h2>404</h2>
@@ -88,14 +128,17 @@
 
   <div id="main-content" style="opacity: 0; transition: opacity 0.5s ease;">
     <header>
-      <div class="container nav-wrap">
-        <a href="/" class="logo" id="header_logo">THE <span>DEN</span></a>
-        <nav class="nav-links" aria-label="Primary">
-          <a class="nav-link" href="/" data-page="home">Home</a>
-          <a class="nav-link" href="/about" data-page="about">About</a>
-          <a class="nav-link" href="/services" data-page="services">Services</a>
-          <a class="nav-link" href="/gallery" data-page="gallery">Gallery</a>
-          <a href="#" class="btn" style="padding: 8px 16px; font-size: 11px;" onclick="openBooking(); return false;">Book Now</a>
+      <div class="container">
+        <div class="nav-top-bar">
+          <a href="index.html" class="logo" id="header_logo">THE <span>DEN</span></a>
+          <button class="btn" onclick="openBooking(); return false;">Book Now</button>
+        </div>
+        <nav class="quick-actions-row" aria-label="Quick Actions">
+          <a href="index.html" class="action-pill" data-nav="home">Home</a>
+          <a href="about.html" class="action-pill" data-nav="about">About</a>
+          <a href="gallery.html" class="action-pill" data-nav="gallery">Gallery</a>
+          <a href="team.html" class="action-pill" data-nav="team">Team</a>
+          <a href="contact.html" class="action-pill" data-nav="contact">Contact</a>
         </nav>
       </div>
     </header>
@@ -157,12 +200,16 @@
     function nsWireHeaderNav() {
       const logo = document.getElementById("header_logo");
       if (logo) logo.setAttribute("href", nsLinkWithSlug("index.html"));
-      document.querySelectorAll("a.nav-link[data-page]").forEach(a => {
-        const page = a.getAttribute("data-page") || a.getAttribute("href") || "index.html";
-        a.setAttribute("href", nsLinkWithSlug(page));
-        const current = (location.pathname.split("/").pop() || "index.html").toLowerCase();
-        if (page.toLowerCase() === current) a.classList.add("active");
-        else a.classList.remove("active");
+      
+      document.querySelectorAll(".action-pill").forEach(a => {
+        const target = a.getAttribute("href");
+        a.setAttribute("href", nsLinkWithSlug(target));
+        
+        // Active State Check
+        const pageKey = a.getAttribute("data-nav");
+        if (pageKey === NS_PAGE) {
+          a.classList.add("active");
+        }
       });
     }
 
