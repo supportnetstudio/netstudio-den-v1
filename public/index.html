@@ -77,13 +77,15 @@
       body { padding-top: 140px; }
     }
 
-    /* --- HERO --- */
+    /* --- HERO (PATCHED: IMAGE-FREE) --- */
     .hero {
-      height: 85vh; min-height: 600px;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.3), #050507),
-                  url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80&w=2000');
-      background-size: cover; background-position: center;
-      display: flex; align-items: center; justify-content: center; text-align: center;
+      height: 85vh;
+      min-height: 600px;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.9), #050507);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
       padding-top: 70px;
     }
     .hero-content h1 { font-size: clamp(40px, 8vw, 56px); font-weight: 900; text-transform: uppercase; letter-spacing: -0.03em; line-height: 0.9; margin-bottom: 20px; }
@@ -248,7 +250,6 @@
       function nsDayOrder(d){ return { monday:1, tuesday:2, wednesday:3, thursday:4, friday:5, saturday:6, sunday:7 }[String(d||"").toLowerCase()] || 99; }
       function nsFmtTime(t){ if (!t) return ""; const parts = String(t).split(":"); const hh = parseInt(parts[0], 10); const mm = parts[1] || "00"; const ampm = hh >= 12 ? "PM" : "AM"; const h12 = ((hh + 11) % 12) + 1; return `${h12}:${mm} ${ampm}`; }
 
-      // ✅ BOOKING ENGINE LOADER (Non-blocking)
       function nsLoadBookingEngine() {
         return new Promise((resolve) => {
           if (window.NetStudio && typeof window.NetStudio.open === "function") return resolve(true);
@@ -287,21 +288,7 @@
         if ($("visit_name")) $("visit_name").textContent = bName;
         if ($("footer_copy")) $("footer_copy").textContent = `© ${new Date().getFullYear()} ${bName}. Powered by Net Studio.`;
 
-        // ---------------------------------------------------------------------
-        // GREEDY READER: (Nested Canonical -> Legacy Flat -> Defaults)
-        // ---------------------------------------------------------------------
-        
-        // HERO
-        // ✅ CRASH GUARD: Check for .style
-        const heroEl = document.querySelector(".hero");
-        const hBg = pick(
-          hero.bg, 
-          biz.hero_bg_url, 
-          "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&q=80&w=2000"
-        );
-        if (hBg && heroEl && heroEl.style) {
-          heroEl.style.backgroundImage = `linear-gradient(to bottom, rgba(0,0,0,0.3), #050507), url('${hBg}')`;
-        }
+        // PATCHED: Hero Background JS logic removed here.
 
         if ($("hero_kicker")) $("hero_kicker").innerHTML = pick(
           hero.kicker, 
@@ -365,11 +352,10 @@
           if ($("hiring_cta")) $("hiring_cta").href = pick(extra.cta1?.link, data.hiring_cta_href, "/contact");
         }
 
-        // VISIT (Business Data ONLY)
+        // VISIT
         const address = [biz.street_address, biz.city, biz.state].filter(Boolean).join(", ");
         if ($("visit_address")) $("visit_address").innerHTML = address || "Location coming soon.";
         
-        // ✅ CRASH GUARD: Phone Display
         const vp = $("visit_phone");
         if (vp) vp.textContent = biz.phone || "";
         if (biz.phone && vp && vp.parentElement && vp.parentElement.style) {
@@ -383,7 +369,6 @@
 
         if (window.lucide) lucide.createIcons();
         
-        // ✅ CRASH GUARD: Opacity
         const main = document.getElementById("main-content");
         if (main && main.style) main.style.opacity = "1";
       }
@@ -391,40 +376,29 @@
       async function init() {
         if (!NS.SLUG) { if($("site-error")) $("site-error").style.display = "block"; return; }
 
-        // 1. GET BUSINESS
         const { data: biz } = await sb.from("business").select("*").eq("slug", NS.SLUG).maybeSingle();
         if (!biz) { if($("site-error")) $("site-error").style.display = "block"; return; }
         window.NS_BUSINESS_ID = biz.id;
 
-        // ✅ 2. GET POINTER (from business_sites_one)
-        const { data: bso, error: bsoErr } = await sb
+        const { data: bso } = await sb
           .from("business_sites_one")
           .select("active_template_key")
           .eq("business_id", biz.id)
           .maybeSingle();
 
-        console.log("bso =", bso, "bsoErr =", bsoErr);
-
-        // ✅ 3. RESOLVE ACTIVE KEY (GUARD AGAINST NULL)
         let activeKey = String(bso?.active_template_key || NS.FALLBACK_TEMPLATE || "den_v1").trim();
         if (!activeKey || activeKey.toLowerCase() === "null") activeKey = (NS.FALLBACK_TEMPLATE || "den_v1").trim();
 
-        console.log("activeKey =", activeKey);
-
-        // ✅ 4. NON-BLOCKING LOAD
         nsLoadBookingEngine();
 
-        // ✅ 5. FETCH CONTENT (Using Resolved Key)
         const [siteRes, hoursRes] = await Promise.all([
           sb.from("business_sites")
-            .select("content_json, last_published_at, template_key") // Fetches key fields
+            .select("content_json, last_published_at, template_key")
             .eq("business_id", biz.id)
             .eq("template_key", activeKey)
             .maybeSingle(),
           sb.from("business_hours").select("*").eq("business_id", biz.id)
         ]);
-
-        console.log("siteRes =", siteRes);
 
         const hList = $("hours_list");
         if (hList && hoursRes.data) {
