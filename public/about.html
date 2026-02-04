@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>About Us — The Den Barbershop</title>
+  <title>About Us</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -54,6 +54,7 @@
       font-weight: 900; font-size: 18px; text-transform: uppercase; 
       letter-spacing: 0.1em; font-style: italic; text-decoration: none; color: inherit; 
     }
+    /* Note: .logo span rule removed from effect as we are using textContent now */
     .logo span { color: var(--accent); }
 
     .quick-actions-row {
@@ -130,7 +131,7 @@
     <header>
       <div class="container">
         <div class="nav-top-bar">
-          <a href="index.html" class="logo" id="header_logo">THE <span>DEN</span></a>
+          <a href="index.html" class="logo" id="header_logo"></a>
           <button class="btn" onclick="openBooking(); return false;">Book Now</button>
         </div>
         <nav class="quick-actions-row" aria-label="Quick Actions">
@@ -283,12 +284,23 @@
             reveal();
             return; 
         }
-        const { data: biz, error: bErr } = await sb.from("business").select("id").eq("slug", NS.BUSINESS_SLUG).maybeSingle();
+
+        // UPDATED: Now selecting "id, name"
+        const { data: biz, error: bErr } = await sb.from("business")
+            .select("id, name")
+            .eq("slug", NS.BUSINESS_SLUG)
+            .maybeSingle();
+
         if (bErr || !biz) { 
             document.getElementById("site-error").style.display = "block"; 
             reveal();
             return; 
         }
+
+        // UPDATED: Set the dynamic name in the header
+        const logo = document.getElementById("header_logo");
+        if (logo) logo.textContent = (biz.name || "").toUpperCase();
+
         const { data: site } = await sb.from("business_sites").select("content_json").eq("business_id", biz.id).eq("template_key", NS.TEMPLATE_KEY).maybeSingle();
         nsWireHeaderNav();
         apply(site?.content_json || {});
