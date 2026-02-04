@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>The Den — Contact Us</title>
+  <title>Contact Us</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -112,7 +112,7 @@
 
   <header>
     <div class="container nav-wrap">
-      <a href="/" class="logo" id="header_logo">THE <span>DEN</span></a>
+      <a href="/" class="logo" id="header_logo"></a>
       
       <div class="mobile-toggle" onclick="toggleMenu()">
         <i data-lucide="menu"></i>
@@ -199,7 +199,7 @@
 
   <footer>
     <div class="container">
-      <div style="font-weight:900; font-size:24px; margin-bottom:10px; text-transform:uppercase; font-style:italic;">THE <span style="color:var(--accent)">DEN</span></div>
+      <div id="footer_logo" style="font-weight:900; font-size:24px; margin-bottom:10px; text-transform:uppercase; font-style:italic;"></div>
       <p>© 2026 The Den Barbershop. Powered by Net Studio.</p>
     </div>
   </footer>
@@ -229,8 +229,6 @@
       const host = (location.hostname || "").toLowerCase();
 
       if (!host || host === "localhost" || host.startsWith("127.")) return null;
-
-      // ✅ REMOVED: Legacy .netstudio.app block (Step 2)
 
       const ROOT = "netstudiodevelopment.com";
       if (host === ROOT || host === "www." + ROOT) return null;
@@ -409,14 +407,23 @@
 
         const sb = supabase.createClient(NS.SUPABASE_URL, NS.SUPABASE_ANON_KEY);
 
-        // 1. Get Business ID
+        // 1. Get Business ID & Name (UPDATED)
         const { data: biz, error } = await sb
           .from("business")
-          .select("id")
+          .select("id, name")
           .eq("slug", NS.BUSINESS_SLUG)
           .maybeSingle();
 
         if (error || !biz?.id) return;
+
+        // 1b. Set Logos (UPDATED)
+        if (biz.name) {
+          const n = biz.name.toUpperCase();
+          const hl = document.getElementById("header_logo");
+          const fl = document.getElementById("footer_logo");
+          if (hl) hl.textContent = n;
+          if (fl) fl.textContent = n;
+        }
 
         document.getElementById("nsdBusiness")?.setAttribute("data-business-id", biz.id);
         document.body.dataset.businessId = biz.id;
