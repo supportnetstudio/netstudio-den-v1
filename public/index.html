@@ -48,9 +48,9 @@
     }
     h2 { font-size: 32px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 16px; }
 
-    /* --- HEADER --- */
+    /* --- HEADER (PATCHED: RELATIVE) --- */
     header {
-      position: fixed; top: 0; width: 100%; z-index: 100;
+      position: relative; width: 100%; z-index: 100;
       background: rgba(0,0,0,0.8); backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--glass-border);
     }
@@ -68,16 +68,16 @@
     .nav-links a:hover,
     .nav-links a.active { color: #fff; }
 
-    /* --- MOBILE HEADER --- */
+    /* --- MOBILE HEADER (PATCHED: NO PADDING-TOP) --- */
     @media (max-width: 768px) {
       header { padding: 6px 0; }
       .nav-wrap { flex-direction: column; height: auto; gap: 8px; padding: 10px 0; }
       .nav-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; width: 100%; }
       .nav-links a.nav-link { font-size: 11px; letter-spacing: 0.12em; }
-      body { padding-top: 140px; }
+      /* body padding removed per instructions */
     }
 
-    /* --- HERO (PATCHED: IMAGE-FREE) --- */
+    /* --- HERO (PATCHED: NO PADDING-TOP) --- */
     .hero {
       height: 85vh;
       min-height: 600px;
@@ -86,7 +86,7 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding-top: 70px;
+      padding-top: 0; /* Set to 0 */
     }
     .hero-content h1 { font-size: clamp(40px, 8vw, 56px); font-weight: 900; text-transform: uppercase; letter-spacing: -0.03em; line-height: 0.9; margin-bottom: 20px; }
     .hero-content p { font-size: 18px; color: var(--text-muted); max-width: 500px; margin: 0 auto 30px; }
@@ -226,6 +226,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    // --- HELPER: DETECT SUBDOMAIN ---
     function nsDetectSlugProdOnly() {
       const ROOT = "netstudiodevelopment.com";
       const host = (location.hostname || "").toLowerCase();
@@ -236,12 +237,28 @@
       return prefix.trim();
     }
 
+    // --- CONFIG & RESOLVER ---
     const NS = {
       SB_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SB_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-      SLUG: nsDetectSlugProdOnly(),
       FALLBACK_TEMPLATE: "den_v1"
     };
+
+    async function nsResolveSlug() {
+      // 1) try slug subdomain
+      const sub = nsDetectSlugProdOnly();
+      if (sub) return sub;
+
+      // 2) custom domain: ask the Worker what slug this host belongs to
+      try {
+        const r = await fetch("/__site", { cache: "no-store" });
+        if (!r.ok) return null;
+        const j = await r.json().catch(() => null);
+        return j?.slug || null;
+      } catch {
+        return null;
+      }
+    }
 
     (() => {
       const sb = supabase.createClient(NS.SB_URL, NS.SB_KEY);
@@ -287,8 +304,6 @@
         if ($("footer_logo")) $("footer_logo").innerHTML = logoHTML;
         if ($("visit_name")) $("visit_name").textContent = bName;
         if ($("footer_copy")) $("footer_copy").textContent = `© ${new Date().getFullYear()} ${bName}. Powered by Net Studio.`;
-
-        // PATCHED: Hero Background JS logic removed here.
 
         if ($("hero_kicker")) $("hero_kicker").innerHTML = pick(
           hero.kicker, 
@@ -374,9 +389,10 @@
       }
 
       async function init() {
-        if (!NS.SLUG) { if($("site-error")) $("site-error").style.display = "block"; return; }
+        const slug = await nsResolveSlug();
+        if (!slug) { if($("site-error")) $("site-error").style.display = "block"; return; }
 
-        const { data: biz } = await sb.from("business").select("*").eq("slug", NS.SLUG).maybeSingle();
+        const { data: biz } = await sb.from("business").select("*").eq("slug", slug).maybeSingle();
         if (!biz) { if($("site-error")) $("site-error").style.display = "block"; return; }
         window.NS_BUSINESS_ID = biz.id;
 
