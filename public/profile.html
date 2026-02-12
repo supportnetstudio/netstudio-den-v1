@@ -49,7 +49,7 @@
 
     /* --- PROFILE HEADER --- */
     .profile-header {
-      position: relative; /* Essential for absolute back button */
+      position: relative;
       background: linear-gradient(to bottom, rgba(0,0,0,0), var(--bg-body)), 
                   url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800');
       background-size: cover; background-position: center;
@@ -57,7 +57,7 @@
       border-bottom: 1px solid var(--border);
     }
 
-    /* Back Button Style */
+    /* Back Button */
     .back-btn {
       position: absolute;
       top: 20px;
@@ -91,20 +91,17 @@
     }
     .barber-name { font-size: 24px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.02em; }
     
-    /* Role Styling */
     .barber-role {
       font-size: 13px; color: var(--accent); font-weight: 700; 
       text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; 
       display: flex; align-items: center; justify-content: center; gap: 4px;
     }
 
-    /* Handle Styling */
     .barber-handle { 
       font-size: 13px; color: var(--text-muted); font-weight: 600; 
       margin-bottom: 16px; display: inline-flex; align-items: center; gap: 4px;
     }
     
-    /* Action Buttons */
     .action-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;
     }
@@ -164,14 +161,70 @@
     }
     
     body:not(.ns-loading) .profile-header > *, 
-    body:not(.ns-loading) .back-btn { 
-      animation: nsFadeIn 0.25s ease-out both; 
-    }
+    body:not(.ns-loading) .back-btn { animation: nsFadeIn 0.25s ease-out both; }
     body:not(.ns-loading) #shop_badge, 
-    body:not(.ns-loading) #mini_gallery {
-      animation: nsFadeIn 0.35s ease-out 0.1s both; 
+    body:not(.ns-loading) #mini_gallery { animation: nsFadeIn 0.35s ease-out 0.1s both; }
+
+    /* ---------- LIGHTBOX ---------- */
+    .lb {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.92); backdrop-filter: blur(8px);
+      display: none; z-index: 9999;
+      opacity: 0; transition: opacity 0.2s ease;
+    }
+    .lb.is-open { display: block; opacity: 1; }
+
+    .lb-stage {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding: 60px 16px 90px;
     }
 
+    .lb-img {
+      max-width: 100%; max-height: 100%;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }
+
+    .lb-close {
+      position: absolute; top: calc(16px + env(safe-area-inset-top)); right: 16px;
+      width: 42px; height: 42px; border-radius: 50%;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 20;
+    }
+    .lb-close i { width: 20px; height: 20px; }
+
+    .lb-nav {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 46px; height: 46px; border-radius: 50%;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 10;
+    }
+    .lb-nav:active { background: rgba(255,255,255,0.2); }
+    .lb-nav i { width: 22px; height: 22px; }
+    .lb-prev { left: 16px; }
+    .lb-next { right: 16px; }
+
+    @media(max-width: 520px){
+      .lb-prev { left: 8px; } .lb-next { right: 8px; }
+    }
+
+    .lb-dots {
+      position: absolute; left: 0; right: 0;
+      bottom: calc(24px + env(safe-area-inset-bottom));
+      display: flex; justify-content: center; gap: 6px;
+      padding: 0 16px; pointer-events: none;
+    }
+    .lb-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: rgba(255,255,255,0.2); transition: 0.2s;
+    }
+    .lb-dot.is-active { background: #fff; transform: scale(1.2); }
+
+    body.lb-lock { overflow: hidden; touch-action: none; }
   </style>
 </head>
 <body class="ns-loading" data-barber-id="" data-business-id="">
@@ -227,9 +280,162 @@
     <div style="height: 100px;"></div> 
   </div>
 
+  <div id="lb" class="lb" aria-hidden="true">
+    <button class="lb-close" id="lb_close" aria-label="Close">
+      <i data-lucide="x"></i>
+    </button>
+
+    <button class="lb-nav lb-prev" id="lb_prev" aria-label="Previous">
+      <i data-lucide="chevron-left"></i>
+    </button>
+    <button class="lb-nav lb-next" id="lb_next" aria-label="Next">
+      <i data-lucide="chevron-right"></i>
+    </button>
+
+    <div class="lb-stage" id="lb_stage">
+      <img id="lb_img" class="lb-img" src="" alt="Work photo" />
+    </div>
+
+    <div class="lb-dots" id="lb_dots"></div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // ---------- helpers ----------
+    // ---------- LIGHTBOX LOGIC ----------
+    let LB_IMAGES = [];
+    let LB_INDEX = 0;
+
+    function lbOpen(images, startIndex) {
+      LB_IMAGES = Array.isArray(images) ? images : [];
+      if(!LB_IMAGES.length) return;
+      
+      LB_INDEX = Math.max(0, Math.min(startIndex || 0, LB_IMAGES.length - 1));
+
+      const lb = document.getElementById("lb");
+      const img = document.getElementById("lb_img");
+
+      if (lb && img) {
+        img.src = LB_IMAGES[LB_INDEX];
+        lb.classList.add("is-open");
+        lb.setAttribute("aria-hidden", "false");
+        document.body.classList.add("lb-lock");
+        lbRenderDots();
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    function lbClose() {
+      const lb = document.getElementById("lb");
+      if (lb) {
+        lb.classList.remove("is-open");
+        lb.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("lb-lock");
+      }
+    }
+
+    function lbShow(i) {
+      if (!LB_IMAGES.length) return;
+      // Loop around
+      LB_INDEX = (i + LB_IMAGES.length) % LB_IMAGES.length;
+      
+      const img = document.getElementById("lb_img");
+      if (img) img.src = LB_IMAGES[LB_INDEX];
+      lbRenderDots();
+    }
+
+    function lbPrev(){ lbShow(LB_INDEX - 1); }
+    function lbNext(){ lbShow(LB_INDEX + 1); }
+
+    function lbRenderDots() {
+      const dots = document.getElementById("lb_dots");
+      if (!dots) return;
+      dots.innerHTML = "";
+      
+      // Limit dots if too many images (simple logic)
+      const count = LB_IMAGES.length;
+      if (count <= 1) return;
+
+      // Show up to 10 dots
+      const maxDots = 10;
+      const showCount = Math.min(count, maxDots);
+      
+      for (let i = 0; i < showCount; i++) {
+        const dot = document.createElement("div");
+        dot.className = "lb-dot";
+        
+        // Approximate active state if scaling
+        let isActive = false;
+        if (count <= maxDots) {
+          if (i === LB_INDEX) isActive = true;
+        } else {
+          // If 20 images and 10 dots, dot 0 covers img 0-1, etc.
+          const ratio = i / (maxDots - 1);
+          const currentRatio = LB_INDEX / (count - 1);
+          if (Math.abs(ratio - currentRatio) < (0.5 / maxDots)) isActive = true;
+        }
+
+        if (isActive) dot.classList.add("is-active");
+        dots.appendChild(dot);
+      }
+    }
+
+    function lbWireControls() {
+      const closeBtn = document.getElementById("lb_close");
+      const prevBtn  = document.getElementById("lb_prev");
+      const nextBtn  = document.getElementById("lb_next");
+      const stage    = document.getElementById("lb_stage");
+      const lb       = document.getElementById("lb");
+
+      if (closeBtn) closeBtn.onclick = (e) => { e.preventDefault(); lbClose(); };
+      if (prevBtn)  prevBtn.onclick  = (e) => { e.preventDefault(); lbPrev(); };
+      if (nextBtn)  nextBtn.onclick  = (e) => { e.preventDefault(); lbNext(); };
+
+      // Tap backdrop to close (but not image)
+      if (stage) {
+        stage.addEventListener("click", (e) => {
+          if (e.target === stage) lbClose();
+        });
+      }
+
+      // Keyboard
+      window.addEventListener("keydown", (e) => {
+        const open = document.getElementById("lb")?.classList.contains("is-open");
+        if (!open) return;
+        if (e.key === "Escape") lbClose();
+        if (e.key === "ArrowLeft") lbPrev();
+        if (e.key === "ArrowRight") lbNext();
+      });
+
+      // Swipe Logic
+      if (stage) {
+        let startX = 0; let startY = 0; let isDown = false;
+        stage.addEventListener("touchstart", (e) => {
+          if (!e.touches[0]) return;
+          isDown = true;
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+        }, { passive: true });
+
+        stage.addEventListener("touchend", (e) => {
+          if (!isDown) return;
+          isDown = false;
+          const t = e.changedTouches ? e.changedTouches[0] : null;
+          if (!t) return;
+          
+          const dx = t.clientX - startX;
+          const dy = t.clientY - startY;
+
+          // Horizontal swipe only
+          if (Math.abs(dx) < 40) return; 
+          if (Math.abs(dy) > Math.abs(dx) * 0.8) return; // Ignore vertical scroll attempts
+
+          if (dx < 0) lbNext();
+          else lbPrev();
+        }, { passive: true });
+      }
+    }
+
+    // ---------- APP LOGIC ----------
     function nsGetSlugFromHost() {
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return String(qp).trim().toLowerCase();
@@ -276,7 +482,6 @@
       return "/team";
     }
   
-    // ---------- config ----------
     window.NS = {
       SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
@@ -302,20 +507,20 @@
       const publicSlug = nsReadPublicSlug();
       if (!bizSlug || !publicSlug) { location.href = nsTeamLink(); return; }
   
-      // 1. Get Business
+      // Business
       const { data: biz, error: bErr } = await sb.from("business").select("id,name").eq("slug", bizSlug).maybeSingle();
       if (bErr || !biz?.id) { location.href = nsTeamLink(); return; }
 
-      // 2. Setup Back Button (Smart Routing)
+      // Back Btn
       const backBtn = document.getElementById("btn_back");
       if (backBtn) {
         backBtn.onclick = function(e) {
           e.preventDefault();
-          location.href = nsTeamLink(); // Always go up to Team list
+          location.href = nsTeamLink();
         };
       }
 
-      // 3. Get Team Member
+      // Team Member
       const { data: tm, error: tErr } = await sb
         .from("team_members")
         .select("id,name,role,bio,photo_url,public_slug,instagram_handle,tiktok_handle")
@@ -325,7 +530,7 @@
   
       if (tErr || !tm?.id) { location.href = nsTeamLink(); return; }
   
-      // --- Data Population (Hidden) ---
+      // Populate Text
       setText("profile_name", tm.name || "Barber");
       setText("profile_bio", tm.bio || "");
       
@@ -366,6 +571,7 @@
         ttBtn.target = "_blank"; ttBtn.rel = "noopener";
       }
 
+      // Booking
       const bookBtn = document.getElementById("btn_book");
       if (bookBtn) {
         bookBtn.onclick = function(e) {
@@ -374,7 +580,7 @@
         };
       }
 
-      // Gallery
+      // Gallery with Lightbox Wiring
       const galleryEl = document.getElementById("mini_gallery");
       const { data: works } = await sb.from("gallery_image").select("image_url")
         .eq("business_id", biz.id).eq("team_member_id", tm.id).eq("type", "team").eq("is_profile", false)
@@ -383,21 +589,30 @@
       if (galleryEl) {
         galleryEl.innerHTML = "";
         const imgs = (works || []).map(r => r.image_url).filter(Boolean);
+        
         if (!imgs.length) {
           galleryEl.innerHTML = `<div style="grid-column:1/-1; opacity:.4; font-size:12px;">No recent work yet.</div>`;
         } else {
-          imgs.forEach(url => {
+          // Wiring Lightbox
+          imgs.forEach((url, idx) => {
             const img = document.createElement("img");
-            img.src = url; img.className = "gallery-img"; img.loading = "lazy";
+            img.src = url; 
+            img.className = "gallery-img"; 
+            img.loading = "lazy";
+            img.alt = "Barber work";
+            
+            // On click -> open LB at this index
+            img.onclick = () => lbOpen(imgs, idx);
+            
             galleryEl.appendChild(img);
           });
         }
       }
 
-      // Footer Name
+      // Footer
       setText("shop_badge_name", (biz.name || "BARBERSHOP").toUpperCase());
 
-      // --- ✅ REVEAL UI (FADE IN) ---
+      // Reveal UI
       requestAnimationFrame(() => {
         document.body.classList.remove("ns-loading");
         const sbadge = document.getElementById("shop_badge");
@@ -406,6 +621,8 @@
     }
   
     (async () => {
+      // Init LB controls once
+      lbWireControls();
       await loadProfile();
       if (window.lucide) lucide.createIcons();
     })();
