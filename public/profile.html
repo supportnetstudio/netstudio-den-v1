@@ -65,10 +65,18 @@
       border: 2px solid var(--accent);
     }
     .barber-name { font-size: 24px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.02em; }
-    .barber-handle { 
+    
+    /* Role Styling */
+    .barber-role {
       font-size: 13px; color: var(--accent); font-weight: 700; 
       text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; 
-      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+    }
+
+    /* Handle Styling */
+    .barber-handle { 
+      font-size: 13px; color: var(--text-muted); font-weight: 600; 
+      margin-bottom: 16px; display: inline-flex; align-items: center; gap: 4px;
     }
     
     .action-grid {
@@ -129,9 +137,14 @@
       <div class="avatar-frame">
         <img id="profile_avatar" src="https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=400" class="avatar" alt="Barber">
       </div>
+      
       <h1 class="barber-name" id="profile_name">...</h1>
       
-      <div class="barber-handle" id="profile_handle_wrap">
+      <div class="barber-role" id="profile_role">
+        <span id="profile_role_text"></span>
+      </div>
+
+      <div class="barber-handle" id="profile_handle_wrap" style="display:none;">
         <i data-lucide="instagram" style="width:12px"></i> 
         <span id="profile_handle">@...</span>
       </div>
@@ -296,7 +309,7 @@
       // find team member by public_slug
       const { data: tm, error: tErr } = await sb
         .from("team_members")
-        .select("id,name,role,bio,photo_url,public_slug")
+        .select("id,name,role,bio,photo_url,public_slug,instagram_handle")
         .eq("business_id", biz.id)
         .eq("public_slug", publicSlug)
         .maybeSingle();
@@ -322,13 +335,37 @@
   
       if (pic?.image_url) avatarUrl = pic.image_url;
   
-      // fill UI
+      // fill UI (DB-backed only)
       setText("profile_name", tm.name || "Barber");
       setText("profile_bio", tm.bio || "");
+      
+      // role (optional)
+      setText("profile_role_text", tm.role || "");
+      
+      // hide role line if empty
+      const roleWrap = document.getElementById("profile_role");
+      if (roleWrap && !(tm.role || "").trim()) roleWrap.style.display = "none";
+
+      // avatar
       setImage("profile_avatar", avatarUrl, tm.name || "Barber");
-  
-      // optional: role goes into handle line if you want
-      // setText("profile_handle", tm.role || "");
+      
+      // stamp dataset attributes
+      document.body.dataset.barberId = tm.id;
+      document.body.dataset.businessId = biz.id;
+
+      // instagram handle logic
+      const ig = (tm.instagram_handle || "").trim();
+      const igWrap = document.getElementById("profile_handle_wrap");
+      const igText = document.getElementById("profile_handle");
+
+      if (igWrap && igText) {
+        if (!ig) {
+          igWrap.style.display = "none";
+        } else {
+          igWrap.style.display = "inline-flex";
+          igText.textContent = ig.startsWith("@") ? ig : ("@" + ig);
+        }
+      }
   
       // footer badge back to team page
       const badge = document.getElementById("shop_badge");
