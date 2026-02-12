@@ -59,6 +59,7 @@
       width: 110px; height: 110px; margin: 0 auto 16px;
       padding: 4px; background: var(--bg-card);
       border-radius: 50%; border: 1px solid var(--border);
+      transition: background 0.3s;
     }
     .avatar {
       width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
@@ -89,7 +90,6 @@
       padding: 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
       display: flex; align-items: center; justify-content: center; gap: 8px;
     }
-    /* Primary button spans full width on row 1 */
     .btn-primary {
       grid-column: span 2; background: var(--accent); color: white; border: none;
       font-size: 14px; font-weight: 700; padding: 16px; text-transform: uppercase;
@@ -119,17 +119,51 @@
     }
     .shop-badge span { color: white; font-weight: 700; }
 
+    /* ---------- LOADING / FADE-IN ---------- */
+    
+    /* 1. Hide content while loading */
+    body.ns-loading .profile-header > *:not(.avatar-frame) { visibility: hidden; }
+    body.ns-loading .profile-header .avatar-frame { border-color: rgba(255,255,255,0.05); }
+    body.ns-loading .avatar { opacity: 0; }
+    body.ns-loading #shop_badge { visibility: hidden; }
+    body.ns-loading #mini_gallery { opacity: 0; }
+
+    /* 2. Skeleton Shimmer on Avatar Frame */
+    @keyframes nsShimmer {
+      0% { background: rgba(255,255,255,0.03); }
+      50% { background: rgba(255,255,255,0.08); }
+      100% { background: rgba(255,255,255,0.03); }
+    }
+    body.ns-loading .avatar-frame { animation: nsShimmer 1.5s ease-in-out infinite; }
+
+    /* 3. Smooth Fade In on Reveal */
+    @keyframes nsFadeIn { 
+      from { opacity: 0; transform: translateY(6px); } 
+      to { opacity: 1; transform: none; } 
+    }
+    
+    body:not(.ns-loading) .profile-header > * { 
+      animation: nsFadeIn 0.25s ease-out both; 
+    }
+    /* Stagger the badge and gallery slightly */
+    body:not(.ns-loading) #shop_badge, 
+    body:not(.ns-loading) #mini_gallery {
+      animation: nsFadeIn 0.35s ease-out 0.1s both; 
+    }
+
   </style>
 </head>
-<body data-barber-id="" data-business-id="">
+<body class="ns-loading" data-barber-id="" data-business-id="">
 
   <div class="app-container">
     <header class="profile-header">
       <div class="avatar-frame">
-        <img id="profile_avatar" src="" class="avatar" alt="Barber">
+        <img id="profile_avatar" 
+             src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" 
+             class="avatar" alt="Barber">
       </div>
       
-      <h1 class="barber-name" id="profile_name">...</h1>
+      <h1 class="barber-name" id="profile_name"></h1>
       
       <div class="barber-role" id="profile_role_wrap" style="display:none;">
         <span id="profile_role_text"></span>
@@ -137,18 +171,15 @@
 
       <div class="barber-handle" id="profile_handle_wrap" style="display:none;">
         <i data-lucide="instagram" style="width:12px"></i> 
-        <span id="profile_handle">@...</span>
+        <span id="profile_handle"></span>
       </div>
       
-      <div class="bio-text" id="profile_bio">
-        Loading profile...
-      </div>
+      <div class="bio-text" id="profile_bio"></div>
 
       <div class="action-grid">
         <a href="#" class="action-btn btn-primary" id="btn_book">
           Book Appointment
         </a>
-        
         <a href="#" class="action-btn" id="btn_instagram" style="display:none;">
           <i data-lucide="instagram" style="width:14px"></i> Instagram
         </a>
@@ -161,12 +192,11 @@
     <div style="padding: 0 20px;">
       <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; color: var(--text-muted);">Recent Work</h3>
       <div class="mini-gallery" id="mini_gallery">
-        <div style="grid-column:1/-1; opacity:.55; font-size:12px;">Loading photos...</div>
-      </div>
+        </div>
     </div>
 
     <a href="#" class="shop-badge" id="shop_badge">
-      Powered by <span id="shop_badge_name">THE DEN</span>
+      Powered by <span id="shop_badge_name"></span>
     </a>
 
     <div style="height: 100px;"></div> 
@@ -178,57 +208,36 @@
     function nsGetSlugFromHost() {
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return String(qp).trim().toLowerCase();
-  
       const host = (location.hostname || "").toLowerCase();
       if (!host || host === "localhost" || host.startsWith("127.")) return null;
-  
       const ROOT = "netstudiodevelopment.com";
-      if (host === ROOT || host === "www." + ROOT) return null;
-  
-      if (host.endsWith("." + ROOT)) {
-        const slug = host.slice(0, -(ROOT.length + 1)).split(".")[0];
-        return slug || null;
-      }
+      if (host.endsWith("." + ROOT)) return host.slice(0, -(ROOT.length + 1)).split(".")[0] || null;
       return null;
     }
   
     function nsShouldUseQuerySlug() {
       const host = (location.hostname || "").toLowerCase();
-      return (
-        host.endsWith(".pages.dev") ||
-        host.endsWith(".workers.dev") ||
-        host === "localhost" ||
-        host.startsWith("127.")
-      );
+      return (host.endsWith(".pages.dev") || host.endsWith(".workers.dev") || host === "localhost" || host.startsWith("127."));
     }
   
     async function nsResolveBusinessSlug() {
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return String(qp).trim().toLowerCase();
-  
       const fromHost = nsGetSlugFromHost();
       if (fromHost) return fromHost;
-  
-      // custom domain path
       try {
         const r = await fetch("/__site", { cache: "no-store" });
         if (!r.ok) return null;
         const j = await r.json();
         return (j?.slug || "").trim().toLowerCase() || null;
-      } catch {
-        return null;
-      }
+      } catch { return null; }
     }
   
     function nsReadPublicSlug() {
-      // 1) query param wins
       const q = new URLSearchParams(location.search).get("public_slug");
       if (q) return String(q).trim();
-  
-      // 2) production route: /team/<public_slug>
       const m = (location.pathname || "").match(/^\/team\/([^\/?#]+)\/?$/);
       if (m) return decodeURIComponent(m[1]);
-  
       return null;
     }
   
@@ -266,29 +275,13 @@
       window.NS.BUSINESS_SLUG = bizSlug;
   
       const publicSlug = nsReadPublicSlug();
-      if (!bizSlug || !publicSlug) {
-        location.href = nsTeamLink();
-        return;
-      }
+      if (!bizSlug || !publicSlug) { location.href = nsTeamLink(); return; }
   
       // 1. Get Business
-      const { data: biz, error: bErr } = await sb
-        .from("business")
-        .select("id,name")
-        .eq("slug", bizSlug)
-        .maybeSingle();
-  
-      if (bErr || !biz?.id) {
-        location.href = nsTeamLink();
-        return;
-      }
+      const { data: biz, error: bErr } = await sb.from("business").select("id,name").eq("slug", bizSlug).maybeSingle();
+      if (bErr || !biz?.id) { location.href = nsTeamLink(); return; }
 
-      // Update footer badge
-      const badge = document.getElementById("shop_badge");
-      if (badge) badge.href = nsTeamLink();
-      setText("shop_badge_name", (biz.name || "").toUpperCase());
-  
-      // 2. Get Team Member (include tiktok_handle)
+      // 2. Get Team Member
       const { data: tm, error: tErr } = await sb
         .from("team_members")
         .select("id,name,role,bio,photo_url,public_slug,instagram_handle,tiktok_handle")
@@ -296,12 +289,9 @@
         .eq("public_slug", publicSlug)
         .maybeSingle();
   
-      if (tErr || !tm?.id) {
-        location.href = nsTeamLink();
-        return;
-      }
+      if (tErr || !tm?.id) { location.href = nsTeamLink(); return; }
   
-      // --- A) Basic Info ---
+      // --- Data Population (Hidden) ---
       setText("profile_name", tm.name || "Barber");
       setText("profile_bio", tm.bio || "");
       
@@ -311,98 +301,75 @@
         document.getElementById("profile_role_wrap").style.display = "flex";
       }
 
-      // --- B) Avatar Priority ---
-      // 1. gallery_image is_profile=true, 2. photo_url
+      // Avatar
       let avatarUrl = tm.photo_url || "";
-      
-      const { data: avatarRow } = await sb
-        .from("gallery_image")
-        .select("image_url")
-        .eq("business_id", biz.id)
-        .eq("team_member_id", tm.id)
-        .eq("type", "team")
-        .eq("is_profile", true)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data: avatarRow } = await sb.from("gallery_image").select("image_url")
+        .eq("business_id", biz.id).eq("team_member_id", tm.id).eq("type", "team").eq("is_profile", true)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
 
       if (avatarRow?.image_url) avatarUrl = avatarRow.image_url;
-      // Default fallback if absolutely nothing
       if (!avatarUrl) avatarUrl = "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=400";
-      
       setImage("profile_avatar", avatarUrl);
 
-      // --- C) Instagram ---
+      // Socials
       const ig = (tm.instagram_handle || "").trim().replace(/^@/, "");
-      const handleWrap = document.getElementById("profile_handle_wrap");
-      const handleEl = document.getElementById("profile_handle");
-      const igBtn = document.getElementById("btn_instagram");
-
       if (ig) {
-        if (handleWrap) handleWrap.style.display = "inline-flex";
-        if (handleEl) handleEl.textContent = "@" + ig;
-
+        document.getElementById("profile_handle_wrap").style.display = "inline-flex";
+        setText("profile_handle", "@" + ig);
+        const igBtn = document.getElementById("btn_instagram");
         if (igBtn) {
           igBtn.style.display = "flex";
           igBtn.href = `https://www.instagram.com/${encodeURIComponent(ig)}/`;
-          igBtn.target = "_blank";
-          igBtn.rel = "noopener";
+          igBtn.target = "_blank"; igBtn.rel = "noopener";
         }
       }
 
-      // --- D) TikTok ---
       const tt = (tm.tiktok_handle || "").trim().replace(/^@/, "");
       const ttBtn = document.getElementById("btn_tiktok");
-      
       if (tt && ttBtn) {
         ttBtn.style.display = "flex";
         ttBtn.href = `https://www.tiktok.com/@${encodeURIComponent(tt)}`;
-        ttBtn.target = "_blank";
-        ttBtn.rel = "noopener";
+        ttBtn.target = "_blank"; ttBtn.rel = "noopener";
       }
 
-      // --- E) Booking Action ---
       const bookBtn = document.getElementById("btn_book");
       if (bookBtn) {
         bookBtn.onclick = function(e) {
           e.preventDefault();
-          if (typeof window.openBooking === "function") {
-            window.openBooking({ staff_id: tm.id });
-          }
+          if (typeof window.openBooking === "function") window.openBooking({ staff_id: tm.id });
         };
       }
 
-      // --- F) Recent Work (Real Gallery) ---
+      // Gallery
       const galleryEl = document.getElementById("mini_gallery");
-      
-      const { data: works, error: gErr } = await sb
-        .from("gallery_image")
-        .select("image_url, created_at")
-        .eq("business_id", biz.id)
-        .eq("team_member_id", tm.id)
-        .eq("type", "team")
-        .eq("is_profile", false)
-        .order("created_at", { ascending: false })
-        .limit(12);
+      const { data: works } = await sb.from("gallery_image").select("image_url")
+        .eq("business_id", biz.id).eq("team_member_id", tm.id).eq("type", "team").eq("is_profile", false)
+        .order("created_at", { ascending: false }).limit(12);
 
       if (galleryEl) {
-        galleryEl.innerHTML = ""; // Clear loading state
-
+        galleryEl.innerHTML = "";
         const imgs = (works || []).map(r => r.image_url).filter(Boolean);
-
         if (!imgs.length) {
           galleryEl.innerHTML = `<div style="grid-column:1/-1; opacity:.4; font-size:12px;">No recent work yet.</div>`;
         } else {
           imgs.forEach(url => {
             const img = document.createElement("img");
-            img.src = url;
-            img.className = "gallery-img";
-            img.loading = "lazy";
-            img.alt = "Barber work";
+            img.src = url; img.className = "gallery-img"; img.loading = "lazy";
             galleryEl.appendChild(img);
           });
         }
       }
+
+      // Footer Name
+      setText("shop_badge_name", (biz.name || "BARBERSHOP").toUpperCase());
+
+      // --- ✅ REVEAL UI (FADE IN) ---
+      // Slight delay to ensure images start painting
+      requestAnimationFrame(() => {
+        document.body.classList.remove("ns-loading");
+        const sbadge = document.getElementById("shop_badge");
+        if (sbadge) sbadge.style.visibility = "visible";
+      });
     }
   
     (async () => {
