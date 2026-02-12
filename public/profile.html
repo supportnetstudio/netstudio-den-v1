@@ -170,10 +170,8 @@
 
     <div style="padding: 0 20px;">
       <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; color: var(--text-muted);">Recent Work</h3>
-      <div class="mini-gallery">
-        <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=300" class="gallery-img">
-        <img src="https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=300" class="gallery-img">
-        <img src="https://images.unsplash.com/photo-1503951914875-befbb711ed3e?w=300" class="gallery-img">
+      <div class="mini-gallery" id="profile_gallery">
+        <div style="grid-column:1/-1; opacity:.55; font-size:12px;">Loading photos...</div>
       </div>
 
       <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; color: var(--text-muted);">Client Love</h3>
@@ -282,6 +280,35 @@
       if (src) el.src = src;
       if (alt) el.alt = alt;
     }
+
+    // PATCH B: Helper functions for gallery
+    function escHtml(s){
+      return String(s ?? "").replace(/[&<>"']/g, c => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[c]));
+    }
+
+    function renderProfileGallery(images) {
+      const wrap = document.getElementById("profile_gallery");
+      if (!wrap) return;
+
+      const list = Array.isArray(images) ? images.filter(x => x && x.image_url) : [];
+
+      if (!list.length) {
+        wrap.innerHTML = `<div style="grid-column:1/-1; opacity:.55; font-size:12px;">No photos yet.</div>`;
+        return;
+      }
+
+      wrap.innerHTML = "";
+      // show up to 9 (3x3). keep your CSS grid as-is.
+      list.slice(0, 9).forEach(img => {
+        const url = img.image_url;
+        const cap = img.caption ? escHtml(img.caption) : "";
+        wrap.insertAdjacentHTML("beforeend", `
+          <img src="${url}" class="gallery-img" alt="${cap}" loading="lazy">
+        `);
+      });
+    }
   
     async function loadProfile() {
       const bizSlug = await nsResolveBusinessSlug();
@@ -319,21 +346,37 @@
         return;
       }
   
-      // profile pic priority:
-      // 1) gallery_image where is_profile=true
-      // 2) team_members.photo_url
+      // PATCH C: Avatar Logic (gallery_image.is_profile=true -> tm.photo_url -> default)
       let avatarUrl = tm.photo_url || "";
-      const { data: pic } = await sb
+      const { data: avatarRow, error: aErr } = await sb
         .from("gallery_image")
         .select("image_url,created_at")
         .eq("business_id", biz.id)
         .eq("team_member_id", tm.id)
+        .eq("type", "team")
         .eq("is_profile", true)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-  
-      if (pic?.image_url) avatarUrl = pic.image_url;
+
+      if (!aErr && avatarRow?.image_url) avatarUrl = avatarRow.image_url;
+
+      // fallback if still blank
+      if (!avatarUrl) {
+        avatarUrl = "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=400";
+      }
+
+      // PATCH C: Fetch Gallery Images (is_profile=false AND type='team')
+      const { data: galleryRows, error: gErr } = await sb
+        .from("gallery_image")
+        .select("id,image_url,caption,created_at,type,is_profile")
+        .eq("business_id", biz.id)
+        .eq("team_member_id", tm.id)
+        .eq("type", "team")
+        .eq("is_profile", false)
+        .order("created_at", { ascending: false });
+
+      if (gErr) console.warn("profile gallery error:", gErr);
   
       // fill UI (DB-backed only)
       setText("profile_name", tm.name || "Barber");
@@ -349,6 +392,9 @@
       // avatar
       setImage("profile_avatar", avatarUrl, tm.name || "Barber");
       
+      // PATCH C: Render Gallery
+      renderProfileGallery(galleryRows || []);
+
       // stamp dataset attributes
       document.body.dataset.barberId = tm.id;
       document.body.dataset.businessId = biz.id;
