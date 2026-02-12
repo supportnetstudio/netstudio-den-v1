@@ -33,7 +33,6 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ✅ iOS horizontal guard */
     html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
     img { max-width: 100%; height: auto; display: block; }
 
@@ -83,7 +82,6 @@
     .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; text-transform: uppercase; }
     .nav-links a:hover, .nav-links a.active { color: white; }
 
-    /* ✅ mobile: hide only nav links; book button stays visible */
     @media(max-width: 768px) { .nav-links { display: none; } }
 
     .team-hero {
@@ -226,6 +224,44 @@
       return u.pathname + "?" + u.searchParams.toString() + u.hash;
     }
 
+    function nsProfileLink(publicSlug) {
+      const s = String(publicSlug || "").trim();
+      if (!s) return "#";
+
+      // Preview: router isn't in front, so go direct to profile.html
+      if (nsShouldUseQuerySlug()) {
+        const u = new URL("profile.html", location.href);
+        u.searchParams.set("public_slug", s);
+        // also keep business slug for preview
+        const bizSlug = window.NS?.BUSINESS_SLUG || nsGetSlugFromHost();
+        if (bizSlug) u.searchParams.set("b", bizSlug);
+        return u.pathname + "?" + u.searchParams.toString();
+      }
+
+      // Production: clean route, worker rewrites to /profile.html internally
+      return `/team/${encodeURIComponent(s)}`;
+    }
+
+    async function nsResolveBusinessSlug() {
+      // 1) Preview / local: ?b=slug wins
+      const qp = new URLSearchParams(location.search).get("b");
+      if (qp) return String(qp).trim().toLowerCase();
+
+      // 2) Production slug host: slug.netstudiodevelopment.com
+      const fromHost = nsGetSlugFromHost();
+      if (fromHost) return fromHost;
+
+      // 3) Custom domain: ask the router via /__site
+      try {
+        const r = await fetch("/__site", { cache: "no-store" });
+        if (!r.ok) return null;
+        const j = await r.json();
+        return (j?.slug || "").trim().toLowerCase() || null;
+      } catch {
+        return null;
+      }
+    }
+
     function nsWireHeaderNav() {
       const logo = document.getElementById("header_logo");
       if (logo) logo.setAttribute("href", nsLinkWithSlug("index.html"));
@@ -244,13 +280,12 @@
     window.NS = {
       SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-      BUSINESS_SLUG: nsGetSlugFromHost(),
+      BUSINESS_SLUG: null, // Will be set by nsResolveBusinessSlug
       TEMPLATE_KEY: "den_v1"
     };
 
-    // Initialize Supabase & Slug reference
+    // Initialize Supabase
     const sb = supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
-    const BUSINESS_SLUG = window.NS.BUSINESS_SLUG;
 
     /* --- CREW RENDERER --- */
     function renderCrew(members, profileMap) {
@@ -271,6 +306,11 @@
         const name = (m.name || "Barber");
         const role = (m.role || "Barber");
         const bio  = (m.bio || "Professional barber at The Den.");
+        
+        // Profile Logic
+        const publicSlug = (m.public_slug || "").trim();
+        const profileHref = nsProfileLink(publicSlug);
+        const profileDisabled = !publicSlug;
 
         const img =
           (id && profileMap.get(id)) ||
@@ -286,9 +326,16 @@
               <div class="barber-name">${name}</div>
               <span class="barber-role">${role}</span>
               <p class="specialties">${bio}</p>
-              <button class="btn" onclick="openBookingWithStaff('${id}')" style="width:100%;">
-                Book ${name}
-              </button>
+              
+              <div style="display:flex; gap:10px; margin-top:auto;">
+                <a class="btn btn-outline" href="${profileHref}" 
+                   style="flex:1; justify-content:center; ${profileDisabled ? 'opacity:.5; pointer-events:none;' : ''}">
+                  View Profile
+                </a>
+                <button class="btn" onclick="openBookingWithStaff('${id}')" style="flex:1;">
+                  Book
+                </button>
+              </div>
             </div>
           </div>
         `);
@@ -296,6 +343,8 @@
     }
 
     async function loadCrew() {
+      const BUSINESS_SLUG = window.NS.BUSINESS_SLUG;
+      
       if (!BUSINESS_SLUG) {
         const grid = document.getElementById("crew_grid");
         if(grid) {
@@ -329,10 +378,11 @@
         if (fLogo) fLogo.textContent = nameUpper;
       }
 
+      // UPDATED: Added public_slug to select
       const { data: members, error: mErr } = await sb
         .schema("public")
         .from("team_members")
-        .select("id, name, role, bio, photo_url, auth_user_id, created_at")
+        .select("id, public_slug, name, role, bio, photo_url, auth_user_id, created_at")
         .eq("business_id", biz.id)
         .not("auth_user_id", "is", null)
         .order("created_at", { ascending: true });
@@ -372,6 +422,7 @@
     }
 
     async function loadTeamHeroCopy() {
+      const BUSINESS_SLUG = window.NS.BUSINESS_SLUG;
       if (!BUSINESS_SLUG) return;
 
       const { data: biz } = await sb
@@ -412,12 +463,21 @@
       if (typeof window.openBooking !== "function") return;
       window.openBooking({ staff_id: staffId });
     };
-    
-    nsWireHeaderNav();
-    loadTeamHeroCopy();
-    loadCrew();
 
-    if (window.lucide) lucide.createIcons();
+    // --- MAIN INIT ---
+    (async () => {
+      window.NS.BUSINESS_SLUG = await nsResolveBusinessSlug();
+      
+      // Now BUSINESS_SLUG is correct for:
+      // - Slug subdomain
+      // - Custom domain
+      // - Preview via ?b=
+      nsWireHeaderNav();
+      await loadTeamHeroCopy();
+      await loadCrew();
+      
+      if (window.lucide) lucide.createIcons();
+    })();
   </script>
 </body>
 </html>
