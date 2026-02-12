@@ -7,8 +7,8 @@
 
   <script>
     // Fallback if JS fails or loads late
-    window.openBooking = window.openBooking || function () {
-      console.warn("Booking engine initializing...");
+    window.openBooking = window.openBooking || function (options) {
+      console.warn("Booking engine initializing...", options);
     };
   </script>
 
@@ -36,7 +36,7 @@
       overflow-x: hidden;
     }
 
-    /* App Wrapper: Constrains content without breaking background */
+    /* App Wrapper */
     .app-container {
       max-width: 480px;
       margin: 0 auto;
@@ -79,6 +79,7 @@
       margin-bottom: 16px; display: inline-flex; align-items: center; gap: 4px;
     }
     
+    /* Action Buttons */
     .action-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;
     }
@@ -88,35 +89,25 @@
       padding: 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
       display: flex; align-items: center; justify-content: center; gap: 8px;
     }
+    /* Primary button spans full width on row 1 */
     .btn-primary {
       grid-column: span 2; background: var(--accent); color: white; border: none;
       font-size: 14px; font-weight: 700; padding: 16px; text-transform: uppercase;
     }
 
     .bio-text { font-size: 14px; color: var(--text-muted); margin-bottom: 30px; line-height: 1.6; }
-    .stats-row {
-      display: flex; justify-content: space-around; padding: 20px 0;
-      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-      margin-bottom: 30px;
-    }
-    .stat-val { font-size: 18px; font-weight: 800; display: block; }
-    .stat-label { font-size: 10px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em; }
 
+    /* Gallery */
     .mini-gallery {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 40px;
     }
     .gallery-img {
       width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 4px;
-      opacity: 0.8; transition: 0.2s; cursor: pointer;
+      opacity: 0.9; transition: 0.2s; cursor: pointer;
     }
     .gallery-img:hover { opacity: 1; }
 
-    .review-pill {
-      background: var(--bg-card); border: 1px solid var(--border);
-      padding: 16px; border-radius: 12px; margin-bottom: 12px;
-    }
-
-    /* Sticky badge with safe-area support */
+    /* Sticky badge */
     .shop-badge {
       position: fixed; 
       bottom: calc(20px + env(safe-area-inset-bottom)); 
@@ -135,12 +126,12 @@
   <div class="app-container">
     <header class="profile-header">
       <div class="avatar-frame">
-        <img id="profile_avatar" src="https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=400" class="avatar" alt="Barber">
+        <img id="profile_avatar" src="" class="avatar" alt="Barber">
       </div>
       
       <h1 class="barber-name" id="profile_name">...</h1>
       
-      <div class="barber-role" id="profile_role">
+      <div class="barber-role" id="profile_role_wrap" style="display:none;">
         <span id="profile_role_text"></span>
       </div>
 
@@ -154,34 +145,23 @@
       </div>
 
       <div class="action-grid">
-        <a href="#" class="action-btn btn-primary" onclick="openBooking(); return false;">
+        <a href="#" class="action-btn btn-primary" id="btn_book">
           Book Appointment
         </a>
-        <a href="#" class="action-btn" id="profile_instagram_btn" style="display:none;">
+        
+        <a href="#" class="action-btn" id="btn_instagram" style="display:none;">
           <i data-lucide="instagram" style="width:14px"></i> Instagram
         </a>
-        <a href="#" class="action-btn" id="profile_tiktok_btn" style="display:none;">
+        <a href="#" class="action-btn" id="btn_tiktok" style="display:none;">
           <i data-lucide="video" style="width:14px"></i> TikTok
         </a>
       </div>
     </header>
 
-    <div class="stats-row">
-      <div class="stat-item"><span class="stat-val">5.0</span><span class="stat-label">Rating</span></div>
-      <div class="stat-item"><span class="stat-val">--</span><span class="stat-label">Cuts</span></div>
-      <div class="stat-item"><span class="stat-val">--</span><span class="stat-label">Exp</span></div>
-    </div>
-
     <div style="padding: 0 20px;">
       <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; color: var(--text-muted);">Recent Work</h3>
-      <div class="mini-gallery" id="profile_gallery">
+      <div class="mini-gallery" id="mini_gallery">
         <div style="grid-column:1/-1; opacity:.55; font-size:12px;">Loading photos...</div>
-      </div>
-
-      <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; color: var(--text-muted);">Client Love</h3>
-      <div class="review-pill">
-        <p style="font-size:13px; font-style:italic; opacity:0.8;">"Best cuts in the city."</p>
-        <div style="font-size:10px; margin-top:8px; opacity:0.5;">— Client</div>
       </div>
     </div>
 
@@ -229,7 +209,7 @@
       const fromHost = nsGetSlugFromHost();
       if (fromHost) return fromHost;
   
-      // custom domain path: ask router
+      // custom domain path
       try {
         const r = await fetch("/__site", { cache: "no-store" });
         if (!r.ok) return null;
@@ -253,14 +233,12 @@
     }
   
     function nsTeamLink() {
-      // preview: team.html?b=slug
       if (nsShouldUseQuerySlug()) {
         const u = new URL("team.html", location.href);
         const b = new URLSearchParams(location.search).get("b");
         if (b) u.searchParams.set("b", b);
         return u.pathname + "?" + u.searchParams.toString();
       }
-      // production: /team
       return "/team";
     }
   
@@ -273,62 +251,14 @@
   
     const sb = supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
   
-    // ---------- render ----------
     function setText(id, val) {
       const el = document.getElementById(id);
       if (el && val != null && String(val).trim() !== "") el.textContent = String(val);
     }
-    function setImage(id, src, alt) {
+    
+    function setImage(id, src) {
       const el = document.getElementById(id);
-      if (!el) return;
-      if (src) el.src = src;
-      if (alt) el.alt = alt;
-    }
-
-    // Helper functions for gallery
-    function escHtml(s){
-      return String(s ?? "").replace(/[&<>"']/g, c => ({
-        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-      }[c]));
-    }
-
-    function renderProfileGallery(images) {
-      const wrap = document.getElementById("profile_gallery");
-      if (!wrap) return;
-
-      const list = Array.isArray(images) ? images.filter(x => x && x.image_url) : [];
-
-      if (!list.length) {
-        wrap.innerHTML = `<div style="grid-column:1/-1; opacity:.55; font-size:12px;">No photos yet.</div>`;
-        return;
-      }
-
-      wrap.innerHTML = "";
-      // show up to 9 (3x3). keep your CSS grid as-is.
-      list.slice(0, 9).forEach(img => {
-        const url = img.image_url;
-        const cap = img.caption ? escHtml(img.caption) : "";
-        wrap.insertAdjacentHTML("beforeend", `
-          <img src="${url}" class="gallery-img" alt="${cap}" loading="lazy">
-        `);
-      });
-    }
-
-    // Helper for Social Buttons
-    function setupSocialBtn(btnId, handle, urlPrefix) {
-      const btn = document.getElementById(btnId);
-      if (!btn) return;
-      const cleanHandle = (handle || "").trim().replace(/^@/, "");
-      
-      if (!cleanHandle) {
-        btn.style.display = "none";
-        return;
-      }
-      
-      // If we have a handle, show button and set link
-      btn.style.display = "flex";
-      btn.href = urlPrefix + cleanHandle;
-      btn.target = "_blank";
+      if (el && src) el.src = src;
     }
   
     async function loadProfile() {
@@ -341,7 +271,7 @@
         return;
       }
   
-      // find business
+      // 1. Get Business
       const { data: biz, error: bErr } = await sb
         .from("business")
         .select("id,name")
@@ -352,8 +282,13 @@
         location.href = nsTeamLink();
         return;
       }
+
+      // Update footer badge
+      const badge = document.getElementById("shop_badge");
+      if (badge) badge.href = nsTeamLink();
+      setText("shop_badge_name", (biz.name || "").toUpperCase());
   
-      // find team member (Added tiktok_handle to selection)
+      // 2. Get Team Member (include tiktok_handle)
       const { data: tm, error: tErr } = await sb
         .from("team_members")
         .select("id,name,role,bio,photo_url,public_slug,instagram_handle,tiktok_handle")
@@ -366,11 +301,23 @@
         return;
       }
   
-      // Avatar Logic
+      // --- A) Basic Info ---
+      setText("profile_name", tm.name || "Barber");
+      setText("profile_bio", tm.bio || "");
+      
+      const roleText = (tm.role || "").trim();
+      if (roleText) {
+        setText("profile_role_text", roleText);
+        document.getElementById("profile_role_wrap").style.display = "flex";
+      }
+
+      // --- B) Avatar Priority ---
+      // 1. gallery_image is_profile=true, 2. photo_url
       let avatarUrl = tm.photo_url || "";
-      const { data: avatarRow, error: aErr } = await sb
+      
+      const { data: avatarRow } = await sb
         .from("gallery_image")
-        .select("image_url,created_at")
+        .select("image_url")
         .eq("business_id", biz.id)
         .eq("team_member_id", tm.id)
         .eq("type", "team")
@@ -379,67 +326,83 @@
         .limit(1)
         .maybeSingle();
 
-      if (!aErr && avatarRow?.image_url) avatarUrl = avatarRow.image_url;
+      if (avatarRow?.image_url) avatarUrl = avatarRow.image_url;
+      // Default fallback if absolutely nothing
       if (!avatarUrl) avatarUrl = "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=400";
+      
+      setImage("profile_avatar", avatarUrl);
 
-      // Gallery Images
-      const { data: galleryRows, error: gErr } = await sb
+      // --- C) Instagram ---
+      const ig = (tm.instagram_handle || "").trim().replace(/^@/, "");
+      const handleWrap = document.getElementById("profile_handle_wrap");
+      const handleEl = document.getElementById("profile_handle");
+      const igBtn = document.getElementById("btn_instagram");
+
+      if (ig) {
+        if (handleWrap) handleWrap.style.display = "inline-flex";
+        if (handleEl) handleEl.textContent = "@" + ig;
+
+        if (igBtn) {
+          igBtn.style.display = "flex";
+          igBtn.href = `https://www.instagram.com/${encodeURIComponent(ig)}/`;
+          igBtn.target = "_blank";
+          igBtn.rel = "noopener";
+        }
+      }
+
+      // --- D) TikTok ---
+      const tt = (tm.tiktok_handle || "").trim().replace(/^@/, "");
+      const ttBtn = document.getElementById("btn_tiktok");
+      
+      if (tt && ttBtn) {
+        ttBtn.style.display = "flex";
+        ttBtn.href = `https://www.tiktok.com/@${encodeURIComponent(tt)}`;
+        ttBtn.target = "_blank";
+        ttBtn.rel = "noopener";
+      }
+
+      // --- E) Booking Action ---
+      const bookBtn = document.getElementById("btn_book");
+      if (bookBtn) {
+        bookBtn.onclick = function(e) {
+          e.preventDefault();
+          if (typeof window.openBooking === "function") {
+            window.openBooking({ staff_id: tm.id });
+          }
+        };
+      }
+
+      // --- F) Recent Work (Real Gallery) ---
+      const galleryEl = document.getElementById("mini_gallery");
+      
+      const { data: works, error: gErr } = await sb
         .from("gallery_image")
-        .select("id,image_url,caption,created_at,type,is_profile")
+        .select("image_url, created_at")
         .eq("business_id", biz.id)
         .eq("team_member_id", tm.id)
         .eq("type", "team")
         .eq("is_profile", false)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(12);
 
-      if (gErr) console.warn("profile gallery error:", gErr);
-  
-      // Fill UI
-      setText("profile_name", tm.name || "Barber");
-      setText("profile_bio", tm.bio || "");
-      setText("profile_role_text", tm.role || "");
-      
-      const roleWrap = document.getElementById("profile_role");
-      if (roleWrap && !(tm.role || "").trim()) roleWrap.style.display = "none";
+      if (galleryEl) {
+        galleryEl.innerHTML = ""; // Clear loading state
 
-      setImage("profile_avatar", avatarUrl, tm.name || "Barber");
-      
-      renderProfileGallery(galleryRows || []);
+        const imgs = (works || []).map(r => r.image_url).filter(Boolean);
 
-      document.body.dataset.barberId = tm.id;
-      document.body.dataset.businessId = biz.id;
-
-      // --- SOCIALS LOGIC ---
-      // 1. Handle in Header (Optional, keep consistent with team card)
-      const ig = (tm.instagram_handle || "").trim();
-      const igWrap = document.getElementById("profile_handle_wrap");
-      const igText = document.getElementById("profile_handle");
-
-      if (igWrap && igText) {
-        if (!ig) {
-          igWrap.style.display = "none";
+        if (!imgs.length) {
+          galleryEl.innerHTML = `<div style="grid-column:1/-1; opacity:.4; font-size:12px;">No recent work yet.</div>`;
         } else {
-          igWrap.style.display = "inline-flex";
-          igText.textContent = ig.startsWith("@") ? ig : ("@" + ig);
+          imgs.forEach(url => {
+            const img = document.createElement("img");
+            img.src = url;
+            img.className = "gallery-img";
+            img.loading = "lazy";
+            img.alt = "Barber work";
+            galleryEl.appendChild(img);
+          });
         }
       }
-
-      // 2. Big Action Buttons
-      setupSocialBtn("profile_instagram_btn", tm.instagram_handle, "https://instagram.com/");
-      setupSocialBtn("profile_tiktok_btn", tm.tiktok_handle, "https://tiktok.com/@");
-
-      // Footer
-      const badge = document.getElementById("shop_badge");
-      if (badge) badge.href = nsTeamLink();
-      setText("shop_badge_name", (biz.name || "").toUpperCase());
-  
-      // Booking
-      window.openBooking = window.openBooking || function(){};
-      window.openBookingWithStaff = function() {
-        window.openBooking({ staff_id: tm.id });
-      };
-      const btn = document.querySelector(".btn-primary");
-      if (btn) btn.onclick = function(e){ e.preventDefault(); window.openBookingWithStaff(); };
     }
   
     (async () => {
