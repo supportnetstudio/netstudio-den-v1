@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
   <script>
+    // Fallback if JS fails or loads late
     window.openBooking = window.openBooking || function () {
       console.warn("Booking engine initializing...");
     };
@@ -67,7 +68,7 @@
     .barber-handle { 
       font-size: 13px; color: var(--accent); font-weight: 700; 
       text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; 
-      display: inline-flex; align-items: center; gap: 4px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
     }
     
     .action-grid {
@@ -121,21 +122,22 @@
 
   </style>
 </head>
-<body data-barber-id="barber_757_jay" data-business-id="shop_the_den_001">
+<body data-barber-id="" data-business-id="">
 
   <div class="app-container">
     <header class="profile-header">
       <div class="avatar-frame">
-        <img src="https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=400" class="avatar" alt="Jay">
+        <img id="profile_avatar" src="https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=400" class="avatar" alt="Barber">
       </div>
-      <h1 class="barber-name">Jay "The Fade"</h1>
-      <div class="barber-handle">
-        <i data-lucide="instagram" style="width:12px"></i> @jay_fades757
+      <h1 class="barber-name" id="profile_name">...</h1>
+      
+      <div class="barber-handle" id="profile_handle_wrap">
+        <i data-lucide="instagram" style="width:12px"></i> 
+        <span id="profile_handle">@...</span>
       </div>
       
-      <div class="bio-text">
-        Master Barber at The Den. Specializing in skin fades and sharp lineups. 
-        "Precision is my religion."
+      <div class="bio-text" id="profile_bio">
+        Loading profile...
       </div>
 
       <div class="action-grid">
@@ -149,8 +151,8 @@
 
     <div class="stats-row">
       <div class="stat-item"><span class="stat-val">5.0</span><span class="stat-label">Rating</span></div>
-      <div class="stat-item"><span class="stat-val">2.4k</span><span class="stat-label">Cuts</span></div>
-      <div class="stat-item"><span class="stat-val">6yr</span><span class="stat-label">Exp</span></div>
+      <div class="stat-item"><span class="stat-val">--</span><span class="stat-label">Cuts</span></div>
+      <div class="stat-item"><span class="stat-val">--</span><span class="stat-label">Exp</span></div>
     </div>
 
     <div style="padding: 0 20px;">
@@ -163,20 +165,191 @@
 
       <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; color: var(--text-muted);">Client Love</h3>
       <div class="review-pill">
-        <p style="font-size:13px; font-style:italic; opacity:0.8;">"Jay is the only one I trust with my beard."</p>
-        <div style="font-size:10px; margin-top:8px; opacity:0.5;">— Mike T.</div>
+        <p style="font-size:13px; font-style:italic; opacity:0.8;">"Best cuts in the city."</p>
+        <div style="font-size:10px; margin-top:8px; opacity:0.5;">— Client</div>
       </div>
     </div>
 
-    <a href="index.html" class="shop-badge">
-      Powered by <span>THE DEN</span>
+    <a href="#" class="shop-badge" id="shop_badge">
+      Powered by <span id="shop_badge_name">THE DEN</span>
     </a>
 
     <div style="height: 100px;"></div> 
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    if (window.lucide) lucide.createIcons();
+    // ---------- helpers ----------
+    function nsGetSlugFromHost() {
+      const qp = new URLSearchParams(location.search).get("b");
+      if (qp) return String(qp).trim().toLowerCase();
+  
+      const host = (location.hostname || "").toLowerCase();
+      if (!host || host === "localhost" || host.startsWith("127.")) return null;
+  
+      const ROOT = "netstudiodevelopment.com";
+      if (host === ROOT || host === "www." + ROOT) return null;
+  
+      if (host.endsWith("." + ROOT)) {
+        const slug = host.slice(0, -(ROOT.length + 1)).split(".")[0];
+        return slug || null;
+      }
+      return null;
+    }
+  
+    function nsShouldUseQuerySlug() {
+      const host = (location.hostname || "").toLowerCase();
+      return (
+        host.endsWith(".pages.dev") ||
+        host.endsWith(".workers.dev") ||
+        host === "localhost" ||
+        host.startsWith("127.")
+      );
+    }
+  
+    async function nsResolveBusinessSlug() {
+      const qp = new URLSearchParams(location.search).get("b");
+      if (qp) return String(qp).trim().toLowerCase();
+  
+      const fromHost = nsGetSlugFromHost();
+      if (fromHost) return fromHost;
+  
+      // custom domain path: ask router
+      try {
+        const r = await fetch("/__site", { cache: "no-store" });
+        if (!r.ok) return null;
+        const j = await r.json();
+        return (j?.slug || "").trim().toLowerCase() || null;
+      } catch {
+        return null;
+      }
+    }
+  
+    function nsReadPublicSlug() {
+      // 1) query param wins
+      const q = new URLSearchParams(location.search).get("public_slug");
+      if (q) return String(q).trim();
+  
+      // 2) production route: /team/<public_slug>
+      const m = (location.pathname || "").match(/^\/team\/([^\/?#]+)\/?$/);
+      if (m) return decodeURIComponent(m[1]);
+  
+      return null;
+    }
+  
+    function nsTeamLink() {
+      // preview: team.html?b=slug
+      if (nsShouldUseQuerySlug()) {
+        const u = new URL("team.html", location.href);
+        const b = new URLSearchParams(location.search).get("b");
+        if (b) u.searchParams.set("b", b);
+        return u.pathname + "?" + u.searchParams.toString();
+      }
+      // production: /team
+      return "/team";
+    }
+  
+    // ---------- config ----------
+    window.NS = {
+      SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
+      BUSINESS_SLUG: null
+    };
+  
+    const sb = supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
+  
+    // ---------- render ----------
+    function setText(id, val) {
+      const el = document.getElementById(id);
+      if (el && val != null && String(val).trim() !== "") el.textContent = String(val);
+    }
+    function setImage(id, src, alt) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (src) el.src = src;
+      if (alt) el.alt = alt;
+    }
+  
+    async function loadProfile() {
+      const bizSlug = await nsResolveBusinessSlug();
+      window.NS.BUSINESS_SLUG = bizSlug;
+  
+      const publicSlug = nsReadPublicSlug();
+      if (!bizSlug || !publicSlug) {
+        // fail safe: kick them back to team page
+        location.href = nsTeamLink();
+        return;
+      }
+  
+      // find business
+      const { data: biz, error: bErr } = await sb
+        .from("business")
+        .select("id,name")
+        .eq("slug", bizSlug)
+        .maybeSingle();
+  
+      if (bErr || !biz?.id) {
+        location.href = nsTeamLink();
+        return;
+      }
+  
+      // find team member by public_slug
+      const { data: tm, error: tErr } = await sb
+        .from("team_members")
+        .select("id,name,role,bio,photo_url,public_slug")
+        .eq("business_id", biz.id)
+        .eq("public_slug", publicSlug)
+        .maybeSingle();
+  
+      if (tErr || !tm?.id) {
+        location.href = nsTeamLink();
+        return;
+      }
+  
+      // profile pic priority:
+      // 1) gallery_image where is_profile=true
+      // 2) team_members.photo_url
+      let avatarUrl = tm.photo_url || "";
+      const { data: pic } = await sb
+        .from("gallery_image")
+        .select("image_url,created_at")
+        .eq("business_id", biz.id)
+        .eq("team_member_id", tm.id)
+        .eq("is_profile", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+  
+      if (pic?.image_url) avatarUrl = pic.image_url;
+  
+      // fill UI
+      setText("profile_name", tm.name || "Barber");
+      setText("profile_bio", tm.bio || "");
+      setImage("profile_avatar", avatarUrl, tm.name || "Barber");
+  
+      // optional: role goes into handle line if you want
+      // setText("profile_handle", tm.role || "");
+  
+      // footer badge back to team page
+      const badge = document.getElementById("shop_badge");
+      if (badge) badge.href = nsTeamLink();
+      setText("shop_badge_name", (biz.name || "").toUpperCase());
+  
+      // hook booking to staff_id
+      window.openBooking = window.openBooking || function(){};
+      window.openBookingWithStaff = function() {
+        window.openBooking({ staff_id: tm.id });
+      };
+  
+      // make the main button use staff booking
+      const btn = document.querySelector(".btn-primary");
+      if (btn) btn.onclick = function(e){ e.preventDefault(); window.openBookingWithStaff(); };
+    }
+  
+    (async () => {
+      await loadProfile();
+      if (window.lucide) lucide.createIcons();
+    })();
   </script>
 
 </body>
