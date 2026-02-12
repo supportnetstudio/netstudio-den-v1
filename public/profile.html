@@ -157,8 +157,12 @@
         <a href="#" class="action-btn btn-primary" onclick="openBooking(); return false;">
           Book Appointment
         </a>
-        <a href="#" class="action-btn"><i data-lucide="camera" style="width:14px"></i> Portfolio</a>
-        <a href="#" class="action-btn"><i data-lucide="dollar-sign" style="width:14px"></i> Tip Jar</a>
+        <a href="#" class="action-btn" id="profile_instagram_btn" style="display:none;">
+          <i data-lucide="instagram" style="width:14px"></i> Instagram
+        </a>
+        <a href="#" class="action-btn" id="profile_tiktok_btn" style="display:none;">
+          <i data-lucide="video" style="width:14px"></i> TikTok
+        </a>
       </div>
     </header>
 
@@ -281,7 +285,7 @@
       if (alt) el.alt = alt;
     }
 
-    // PATCH B: Helper functions for gallery
+    // Helper functions for gallery
     function escHtml(s){
       return String(s ?? "").replace(/[&<>"']/g, c => ({
         "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -309,6 +313,23 @@
         `);
       });
     }
+
+    // Helper for Social Buttons
+    function setupSocialBtn(btnId, handle, urlPrefix) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      const cleanHandle = (handle || "").trim().replace(/^@/, "");
+      
+      if (!cleanHandle) {
+        btn.style.display = "none";
+        return;
+      }
+      
+      // If we have a handle, show button and set link
+      btn.style.display = "flex";
+      btn.href = urlPrefix + cleanHandle;
+      btn.target = "_blank";
+    }
   
     async function loadProfile() {
       const bizSlug = await nsResolveBusinessSlug();
@@ -316,7 +337,6 @@
   
       const publicSlug = nsReadPublicSlug();
       if (!bizSlug || !publicSlug) {
-        // fail safe: kick them back to team page
         location.href = nsTeamLink();
         return;
       }
@@ -333,10 +353,10 @@
         return;
       }
   
-      // find team member by public_slug
+      // find team member (Added tiktok_handle to selection)
       const { data: tm, error: tErr } = await sb
         .from("team_members")
-        .select("id,name,role,bio,photo_url,public_slug,instagram_handle")
+        .select("id,name,role,bio,photo_url,public_slug,instagram_handle,tiktok_handle")
         .eq("business_id", biz.id)
         .eq("public_slug", publicSlug)
         .maybeSingle();
@@ -346,7 +366,7 @@
         return;
       }
   
-      // PATCH C: Avatar Logic (gallery_image.is_profile=true -> tm.photo_url -> default)
+      // Avatar Logic
       let avatarUrl = tm.photo_url || "";
       const { data: avatarRow, error: aErr } = await sb
         .from("gallery_image")
@@ -360,13 +380,9 @@
         .maybeSingle();
 
       if (!aErr && avatarRow?.image_url) avatarUrl = avatarRow.image_url;
+      if (!avatarUrl) avatarUrl = "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=400";
 
-      // fallback if still blank
-      if (!avatarUrl) {
-        avatarUrl = "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=400";
-      }
-
-      // PATCH C: Fetch Gallery Images (is_profile=false AND type='team')
+      // Gallery Images
       const { data: galleryRows, error: gErr } = await sb
         .from("gallery_image")
         .select("id,image_url,caption,created_at,type,is_profile")
@@ -378,28 +394,23 @@
 
       if (gErr) console.warn("profile gallery error:", gErr);
   
-      // fill UI (DB-backed only)
+      // Fill UI
       setText("profile_name", tm.name || "Barber");
       setText("profile_bio", tm.bio || "");
-      
-      // role (optional)
       setText("profile_role_text", tm.role || "");
       
-      // hide role line if empty
       const roleWrap = document.getElementById("profile_role");
       if (roleWrap && !(tm.role || "").trim()) roleWrap.style.display = "none";
 
-      // avatar
       setImage("profile_avatar", avatarUrl, tm.name || "Barber");
       
-      // PATCH C: Render Gallery
       renderProfileGallery(galleryRows || []);
 
-      // stamp dataset attributes
       document.body.dataset.barberId = tm.id;
       document.body.dataset.businessId = biz.id;
 
-      // instagram handle logic
+      // --- SOCIALS LOGIC ---
+      // 1. Handle in Header (Optional, keep consistent with team card)
       const ig = (tm.instagram_handle || "").trim();
       const igWrap = document.getElementById("profile_handle_wrap");
       const igText = document.getElementById("profile_handle");
@@ -412,19 +423,21 @@
           igText.textContent = ig.startsWith("@") ? ig : ("@" + ig);
         }
       }
-  
-      // footer badge back to team page
+
+      // 2. Big Action Buttons
+      setupSocialBtn("profile_instagram_btn", tm.instagram_handle, "https://instagram.com/");
+      setupSocialBtn("profile_tiktok_btn", tm.tiktok_handle, "https://tiktok.com/@");
+
+      // Footer
       const badge = document.getElementById("shop_badge");
       if (badge) badge.href = nsTeamLink();
       setText("shop_badge_name", (biz.name || "").toUpperCase());
   
-      // hook booking to staff_id
+      // Booking
       window.openBooking = window.openBooking || function(){};
       window.openBookingWithStaff = function() {
         window.openBooking({ staff_id: tm.id });
       };
-  
-      // make the main button use staff booking
       const btn = document.querySelector(".btn-primary");
       if (btn) btn.onclick = function(e){ e.preventDefault(); window.openBookingWithStaff(); };
     }
