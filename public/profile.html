@@ -2,461 +2,212 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Barber Profile — Net Studio</title>
+  <title>MUSE — Stylist Profile</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
-  <script>
-    // Fallback if JS fails or loads late
-    window.openBooking = window.openBooking || function (options) {
-      console.warn("Booking engine initializing...", options);
-    };
-  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Oswald:wght@400;500;700&display=swap" rel="stylesheet">
 
   <script src="https://unpkg.com/lucide@latest"></script>
-  
   <style>
+    /* --- CORE VARIABLES --- */
     :root {
-      --bg-body: #050507;
-      --bg-card: #141414;
-      --text-main: #ffffff;
-      --text-muted: rgba(255, 255, 255, 0.6);
-      --accent: #ef4444; 
-      --border: rgba(255, 255, 255, 0.1);
+      --bg: #ffffff;
+      --text: #000000;
+      --accent: #2563eb;
+      --border: #000000;
+      --font-display: 'Oswald', sans-serif;
       --font-body: 'Inter', sans-serif;
-      --radius: 16px;
     }
 
-    /* Reset & Global Guard */
+    /* --- RESET --- */
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { 
-      width: 100%; 
-      background: var(--bg-body); 
-      color: var(--text-main);
-      font-family: var(--font-body);
-      overflow-x: hidden;
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--font-body); line-height: 1.5;
+      max-width: 480px; margin: 0 auto; /* App-width limit */
+      min-height: 100vh; position: relative;
+      border-left: 1px solid #eee; border-right: 1px solid #eee;
     }
 
-    /* App Wrapper */
-    .app-container {
-      max-width: 480px;
-      margin: 0 auto;
-      min-height: 100vh;
-      position: relative;
-      background: var(--bg-body);
-    }
-
-    img { max-width: 100%; height: auto; display: block; }
-
-    /* --- PROFILE HEADER --- */
-    .profile-header {
-      position: relative;
-      background: linear-gradient(to bottom, rgba(0,0,0,0), var(--bg-body)), 
-                  url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800');
-      background-size: cover; background-position: center;
-      padding: 60px 20px 20px; text-align: center;
+    /* --- NAVIGATION --- */
+    .top-bar {
+      padding: 20px; display: flex; justify-content: space-between; align-items: center;
       border-bottom: 1px solid var(--border);
-      overflow: hidden;
+      position: relative; top: auto; background: white; z-index: 50;
+    }
+    .brand-mini { font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: -0.05em; }
+    .back-btn { 
+      font-size: 11px; font-weight: 600; text-transform: uppercase; 
+      text-decoration: none; color: var(--text); display: flex; align-items: center; gap: 4px; 
     }
 
-    /* Back Button */
-    .back-btn {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(6px);
-      border: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      text-decoration: none;
-      z-index: 20;
-      transition: background 0.2s;
-    }
-    .back-btn:active { background: rgba(0,0,0,0.8); }
-    .back-btn i { width: 18px; height: 18px; }
+    /* Loading: prevent placeholder flash */
+    body.ns-loading .profile-hero,
+    body.ns-loading .specs-grid,
+    body.ns-loading .action-stack,
+    body.ns-loading .portfolio-header,
+    body.ns-loading .grid-feed,
+    body.ns-loading .mini-footer { opacity: 0; }
 
-    .avatar-frame {
-      width: 110px; height: 110px; margin: 0 auto 16px;
-      padding: 4px; background: var(--bg-card);
-      border-radius: 50%; border: 1px solid var(--border);
-      transition: background 0.3s;
-    }
-    .avatar {
-      width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
-      border: 2px solid var(--accent);
+    body:not(.ns-loading) .profile-hero,
+    body:not(.ns-loading) .specs-grid,
+    body:not(.ns-loading) .action-stack,
+    body:not(.ns-loading) .portfolio-header,
+    body:not(.ns-loading) .grid-feed,
+    body:not(.ns-loading) .mini-footer {
       opacity: 1;
-      transition: opacity 0.25s ease;
-    }
-    .barber-name { font-size: 24px; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.02em; }
-    
-    .barber-role {
-      font-size: 13px; color: var(--accent); font-weight: 700; 
-      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; 
-      display: flex; align-items: center; justify-content: center; gap: 4px;
+      transition: opacity .18s ease;
     }
 
-    .barber-handle { 
-      font-size: 13px; color: var(--text-muted); font-weight: 600; 
-      margin-bottom: 16px; display: inline-flex; align-items: center; gap: 4px;
+    /* --- HERO --- */
+    .profile-hero {
+      position: relative;
+    }
+    .profile-img {
+      width: 100%; aspect-ratio: 3/4; object-fit: cover; filter: grayscale(100%);
+      border-bottom: 1px solid var(--border);
     }
     
-    .action-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;
+    .name-overlay {
+      background: var(--text); color: var(--bg); padding: 16px 20px;
     }
-    .action-btn {
-      background: var(--bg-card); border: 1px solid var(--border);
-      color: var(--text-main); text-decoration: none;
-      padding: 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
+    .stylist-name {
+      font-family: var(--font-display); font-size: 48px; text-transform: uppercase; line-height: 0.9;
     }
-    .btn-primary {
-      grid-column: span 2; background: var(--accent); color: white; border: none;
-      font-size: 14px; font-weight: 700; padding: 16px; text-transform: uppercase;
+    .stylist-role {
+      font-family: var(--font-body); font-size: 12px; font-weight: 600; 
+      text-transform: uppercase; letter-spacing: 0.1em; color: #ccc; margin-top: 4px;
     }
 
-    .bio-text { font-size: 14px; color: var(--text-muted); margin-bottom: 30px; line-height: 1.6; }
-
-    /* Gallery */
-    .mini-gallery {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 40px;
+    /* --- SPECS --- */
+    .specs-grid {
+      display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--border);
     }
-    .gallery-img {
-      width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 4px;
-      opacity: 0.9; transition: 0.2s; cursor: pointer;
+    .spec-item {
+      padding: 16px 20px; border-right: 1px solid var(--border);
     }
-    .gallery-img:hover { opacity: 1; }
+    .spec-item:last-child { border-right: none; }
+    
+    .spec-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #666; display: block; margin-bottom: 4px; }
+    .spec-val { font-family: var(--font-display); font-size: 18px; text-transform: uppercase; }
 
-    /* Sticky badge */
-    .shop-badge {
-      position: fixed; 
-      bottom: calc(20px + env(safe-area-inset-bottom)); 
-      left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
-      padding: 8px 16px; border-radius: 50px; border: 1px solid var(--border);
-      font-size: 11px; color: var(--text-muted); text-decoration: none;
-      display: flex; align-items: center; gap: 8px; z-index: 100;
+    /* --- ACTIONS --- */
+    .action-stack { padding: 20px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--border); }
+    
+    .btn-main {
+      background: var(--accent); color: white; text-align: center;
+      padding: 18px; font-weight: 700; text-transform: uppercase; font-size: 14px;
+      text-decoration: none; letter-spacing: 0.05em; border: none; cursor: pointer;
     }
-    .shop-badge span { color: white; font-weight: 700; }
+    .btn-main:hover { opacity: 0.9; }
 
-    /* ---------- LOADING / FADE-IN ---------- */
-    body.ns-loading .avatar-frame { border-color: rgba(255,255,255,0.05); }
-    body.ns-loading .avatar { opacity: 0; }
-    body.ns-loading #shop_badge { visibility: hidden; }
-    body.ns-loading #mini_gallery { opacity: 0; }
-    body.ns-loading .back-btn { opacity: 0; }
-
-    @keyframes nsShimmer {
-      0% { background: rgba(255,255,255,0.03); }
-      50% { background: rgba(255,255,255,0.08); }
-      100% { background: rgba(255,255,255,0.03); }
+    .btn-row { display: flex; gap: 12px; }
+    .btn-sec {
+      flex: 1; border: 1px solid var(--border); background: transparent; color: var(--text);
+      padding: 12px; text-align: center; font-size: 12px; font-weight: 600; text-transform: uppercase;
+      text-decoration: none; transition: 0.2s;
     }
-    body.ns-loading .avatar-frame { animation: nsShimmer 1.5s ease-in-out infinite; }
+    .btn-sec:hover { background: var(--text); color: white; }
 
-    .header-content { opacity: 0; transform: translateY(6px); }
-
-    @keyframes nsFadeIn { 
-      from { opacity: 0; transform: translateY(6px); } 
-      to { opacity: 1; transform: none; } 
+    /* --- PORTFOLIO --- */
+    .portfolio-header {
+      padding: 20px; font-family: var(--font-display); font-size: 24px; text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
     }
     
-    body:not(.ns-loading) .header-content, 
-    body:not(.ns-loading) .back-btn { animation: nsFadeIn 0.25s ease-out both; }
-    body:not(.ns-loading) #shop_badge, 
-    body:not(.ns-loading) #mini_gallery { animation: nsFadeIn 0.35s ease-out 0.1s both; }
-
-    /* ---------- LIGHTBOX ---------- */
-    .lb {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.92); backdrop-filter: blur(8px);
-      display: none; z-index: 9999;
-      opacity: 0; transition: opacity 0.2s ease;
+    .grid-feed {
+      display: grid; grid-template-columns: 1fr 1fr;
     }
-    .lb.is-open { display: block; opacity: 1; }
+    .feed-item {
+      aspect-ratio: 1/1; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      position: relative; overflow: hidden;
+    }
+    .feed-item:nth-child(even) { border-right: none; }
+    
+    .feed-img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); transition: 0.3s; }
+    .feed-item:hover .feed-img { filter: grayscale(0%); transform: scale(1.05); }
 
-    .lb-stage {
-      position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      padding: 60px 16px 90px;
+    /* --- FOOTER --- */
+    .mini-footer {
+      padding: 40px 20px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
     }
 
-    .lb-img {
-      max-width: 100%; max-height: 100%;
-      object-fit: contain;
-      border-radius: 8px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-    }
-
-    .lb-close {
-      position: absolute; top: calc(16px + env(safe-area-inset-top)); right: 16px;
-      width: 42px; height: 42px; border-radius: 50%;
-      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
-      color: #fff; display: flex; align-items: center; justify-content: center;
-      cursor: pointer; z-index: 20;
-    }
-    .lb-close i { width: 20px; height: 20px; }
-
-    .lb-nav {
-      position: absolute; top: 50%; transform: translateY(-50%);
-      width: 46px; height: 46px; border-radius: 50%;
-      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
-      color: #fff; display: flex; align-items: center; justify-content: center;
-      cursor: pointer; z-index: 10;
-    }
-    .lb-nav:active { background: rgba(255,255,255,0.2); }
-    .lb-nav i { width: 22px; height: 22px; }
-    .lb-prev { left: 16px; }
-    .lb-next { right: 16px; }
-
-    @media(max-width: 520px){
-      .lb-prev { left: 8px; } .lb-next { right: 8px; }
-    }
-
-    .lb-dots {
-      position: absolute; left: 0; right: 0;
-      bottom: calc(24px + env(safe-area-inset-bottom));
-      display: flex; justify-content: center; gap: 6px;
-      padding: 0 16px; pointer-events: none;
-    }
-    .lb-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: rgba(255,255,255,0.2); transition: 0.2s;
-    }
-    .lb-dot.is-active { background: #fff; transform: scale(1.2); }
-
-    body.lb-lock { overflow: hidden; touch-action: none; }
   </style>
 </head>
-<body class="ns-loading" data-barber-id="" data-business-id="">
+<body class="ns-loading">
 
-  <div class="app-container">
-    <header class="profile-header">
-      <a href="#" id="btn_back" class="back-btn" aria-label="Back">
-        <i data-lucide="arrow-left"></i>
-      </a>
-
-      <div class="avatar-frame">
-        <img id="profile_avatar" 
-             src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" 
-             class="avatar" alt="Barber">
-      </div>
-      
-      <div class="header-content">
-        <h1 class="barber-name" id="profile_name"></h1>
-        
-        <div class="barber-role" id="profile_role_wrap" style="display:none;">
-          <span id="profile_role_text"></span>
-        </div>
-
-        <div class="barber-handle" id="profile_handle_wrap" style="display:none;">
-          <i data-lucide="instagram" style="width:12px"></i> 
-          <span id="profile_handle"></span>
-        </div>
-        
-        <div class="bio-text" id="profile_bio"></div>
-
-        <div class="action-grid">
-          <a href="#" class="action-btn btn-primary" id="btn_book">
-            Book Appointment
-          </a>
-          <a href="#" class="action-btn" id="btn_instagram" style="display:none;">
-            <i data-lucide="instagram" style="width:14px"></i> Instagram
-          </a>
-          <a href="#" class="action-btn" id="btn_tiktok" style="display:none;">
-            <i data-lucide="video" style="width:14px"></i> TikTok
-          </a>
-        </div>
-      </div>
-    </header>
-
-    <div style="padding: 0 20px;">
-      <h3 style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; color: var(--text-muted);">Recent Work</h3>
-      <div class="mini-gallery" id="mini_gallery">
-        </div>
-    </div>
-
-    <a href="#" class="shop-badge" id="shop_badge">
-      Powered by <span id="shop_badge_name"></span>
-    </a>
-
-    <div style="height: 100px;"></div> 
+  <div class="top-bar">
+    <a href="#" class="back-btn" id="btn_back"><i data-lucide="arrow-left" style="width:14px"></i> Roster</a>
+    <div class="brand-mini">MUSE.</div>
   </div>
 
-  <div id="lb" class="lb" aria-hidden="true">
-    <button class="lb-close" id="lb_close" aria-label="Close">
-      <i data-lucide="x"></i>
-    </button>
-
-    <button class="lb-nav lb-prev" id="lb_prev" aria-label="Previous">
-      <i data-lucide="chevron-left"></i>
-    </button>
-    <button class="lb-nav lb-next" id="lb_next" aria-label="Next">
-      <i data-lucide="chevron-right"></i>
-    </button>
-
-    <div class="lb-stage" id="lb_stage">
-      <img id="lb_img" class="lb-img" src="" alt="Work photo" />
+  <div class="profile-hero">
+    <img id="profile_avatar" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" class="profile-img" alt="">
+    <div class="name-overlay">
+      <h1 class="stylist-name" id="profile_name"></h1>
+      <div class="stylist-role" id="profile_role" style="display:none;"></div>
+      <div style="margin-top:10px; font-size:12px; opacity:.85; display:none;" id="profile_bio"></div>
+      <div style="margin-top:10px; display:none; align-items:center; gap:6px;" id="profile_handle_wrap">
+        <i data-lucide="instagram" style="width:14px"></i>
+        <a id="profile_ig_link" href="#" target="_blank" rel="noopener"
+           style="color:#fff; text-decoration:none; font-size:12px; font-weight:600;"></a>
+      </div>
     </div>
+  </div>
 
-    <div class="lb-dots" id="lb_dots"></div>
+  <div class="specs-grid" id="specs_grid" style="display:none;">
+    <div class="spec-item">
+      <span class="spec-label">Specialty</span>
+      <span class="spec-val" id="spec_specialty"></span>
+    </div>
+    <div class="spec-item">
+      <span class="spec-label">Experience</span>
+      <span class="spec-val" id="spec_experience"></span>
+    </div>
+  </div>
+
+  <div class="action-stack">
+    <button class="btn-main" id="btn_book">
+      Book Appointment
+    </button>
+    <div class="btn-row">
+      <a href="#" class="btn-sec" id="btn_instagram" style="display:none;">Instagram</a>
+      <a href="#" class="btn-sec" id="btn_tiktok" style="display:none;">TikTok</a>
+    </div>
+  </div>
+
+  <div class="portfolio-header">Recent Works</div>
+  <div class="grid-feed" id="mini_gallery">
+    <div style="grid-column:1/-1; padding:16px 20px; font-size:12px; opacity:.6;">Loading photos...</div>
+  </div>
+
+  <div class="mini-footer">
+    Represented by <span id="shop_badge_name">MUSE</span>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // ---------- LIGHTBOX LOGIC ----------
-    let LB_IMAGES = [];
-    let LB_INDEX = 0;
+    // booking stub (kept simple; you said booking later)
+    window.openBooking = window.openBooking || function(){ console.log("Open booking"); };
 
-    function lbOpen(images, startIndex) {
-      LB_IMAGES = Array.isArray(images) ? images : [];
-      if(!LB_IMAGES.length) return;
-      
-      LB_INDEX = Math.max(0, Math.min(startIndex || 0, LB_IMAGES.length - 1));
-
-      const lb = document.getElementById("lb");
-      const img = document.getElementById("lb_img");
-
-      if (lb && img) {
-        img.src = LB_IMAGES[LB_INDEX];
-        lb.classList.add("is-open");
-        lb.setAttribute("aria-hidden", "false");
-        document.body.classList.add("lb-lock");
-        lbRenderDots();
-        if (window.lucide) lucide.createIcons();
-      }
-    }
-
-    function lbClose() {
-      const lb = document.getElementById("lb");
-      if (lb) {
-        lb.classList.remove("is-open");
-        lb.setAttribute("aria-hidden", "true");
-        document.body.classList.remove("lb-lock");
-      }
-    }
-
-    function lbShow(i) {
-      if (!LB_IMAGES.length) return;
-      // Loop around
-      LB_INDEX = (i + LB_IMAGES.length) % LB_IMAGES.length;
-      
-      const img = document.getElementById("lb_img");
-      if (img) img.src = LB_IMAGES[LB_INDEX];
-      lbRenderDots();
-    }
-
-    function lbPrev(){ lbShow(LB_INDEX - 1); }
-    function lbNext(){ lbShow(LB_INDEX + 1); }
-
-    function lbRenderDots() {
-      const dots = document.getElementById("lb_dots");
-      if (!dots) return;
-      dots.innerHTML = "";
-      
-      // Limit dots if too many images (simple logic)
-      const count = LB_IMAGES.length;
-      if (count <= 1) return;
-
-      // Show up to 10 dots
-      const maxDots = 10;
-      const showCount = Math.min(count, maxDots);
-      
-      for (let i = 0; i < showCount; i++) {
-        const dot = document.createElement("div");
-        dot.className = "lb-dot";
-        
-        // Approximate active state if scaling
-        let isActive = false;
-        if (count <= maxDots) {
-          if (i === LB_INDEX) isActive = true;
-        } else {
-          // If 20 images and 10 dots, dot 0 covers img 0-1, etc.
-          const ratio = i / (maxDots - 1);
-          const currentRatio = LB_INDEX / (count - 1);
-          if (Math.abs(ratio - currentRatio) < (0.5 / maxDots)) isActive = true;
-        }
-
-        if (isActive) dot.classList.add("is-active");
-        dots.appendChild(dot);
-      }
-    }
-
-    function lbWireControls() {
-      const closeBtn = document.getElementById("lb_close");
-      const prevBtn  = document.getElementById("lb_prev");
-      const nextBtn  = document.getElementById("lb_next");
-      const stage    = document.getElementById("lb_stage");
-      const lb       = document.getElementById("lb");
-
-      if (closeBtn) closeBtn.onclick = (e) => { e.preventDefault(); lbClose(); };
-      if (prevBtn)  prevBtn.onclick  = (e) => { e.preventDefault(); lbPrev(); };
-      if (nextBtn)  nextBtn.onclick  = (e) => { e.preventDefault(); lbNext(); };
-
-      // Tap backdrop to close (but not image)
-      if (stage) {
-        stage.addEventListener("click", (e) => {
-          if (e.target === stage) lbClose();
-        });
-      }
-
-      // Keyboard
-      window.addEventListener("keydown", (e) => {
-        const open = document.getElementById("lb")?.classList.contains("is-open");
-        if (!open) return;
-        if (e.key === "Escape") lbClose();
-        if (e.key === "ArrowLeft") lbPrev();
-        if (e.key === "ArrowRight") lbNext();
-      });
-
-      // Swipe Logic
-      if (stage) {
-        let startX = 0; let startY = 0; let isDown = false;
-        stage.addEventListener("touchstart", (e) => {
-          if (!e.touches[0]) return;
-          isDown = true;
-          startX = e.touches[0].clientX;
-          startY = e.touches[0].clientY;
-        }, { passive: true });
-
-        stage.addEventListener("touchend", (e) => {
-          if (!isDown) return;
-          isDown = false;
-          const t = e.changedTouches ? e.changedTouches[0] : null;
-          if (!t) return;
-          
-          const dx = t.clientX - startX;
-          const dy = t.clientY - startY;
-
-          // Horizontal swipe only
-          if (Math.abs(dx) < 40) return; 
-          if (Math.abs(dy) > Math.abs(dx) * 0.8) return; // Ignore vertical scroll attempts
-
-          if (dx < 0) lbNext();
-          else lbPrev();
-        }, { passive: true });
-      }
-    }
-
-    // ---------- APP LOGIC ----------
     function nsGetSlugFromHost() {
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return String(qp).trim().toLowerCase();
       const host = (location.hostname || "").toLowerCase();
       if (!host || host === "localhost" || host.startsWith("127.")) return null;
       const ROOT = "netstudiodevelopment.com";
+      if (host === ROOT || host === "www." + ROOT) return null;
       if (host.endsWith("." + ROOT)) return host.slice(0, -(ROOT.length + 1)).split(".")[0] || null;
       return null;
     }
-  
+
     function nsShouldUseQuerySlug() {
       const host = (location.hostname || "").toLowerCase();
       return (host.endsWith(".pages.dev") || host.endsWith(".workers.dev") || host === "localhost" || host.startsWith("127."));
     }
-  
+
     async function nsResolveBusinessSlug() {
       const qp = new URLSearchParams(location.search).get("b");
       if (qp) return String(qp).trim().toLowerCase();
@@ -469,7 +220,7 @@
         return (j?.slug || "").trim().toLowerCase() || null;
       } catch { return null; }
     }
-  
+
     function nsReadPublicSlug() {
       const q = new URLSearchParams(location.search).get("public_slug");
       if (q) return String(q).trim();
@@ -477,7 +228,7 @@
       if (m) return decodeURIComponent(m[1]);
       return null;
     }
-  
+
     function nsTeamLink() {
       if (nsShouldUseQuerySlug()) {
         const u = new URL("team.html", location.href);
@@ -487,156 +238,144 @@
       }
       return "/team";
     }
-  
+
     window.NS = {
       SUPABASE_URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
       SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
       BUSINESS_SLUG: null
     };
-  
+
     const sb = supabase.createClient(window.NS.SUPABASE_URL, window.NS.SUPABASE_ANON_KEY);
-  
+
     function setText(id, val) {
       const el = document.getElementById(id);
-      if (el && val != null && String(val).trim() !== "") el.textContent = String(val);
+      if (!el) return;
+      const v = (val == null) ? "" : String(val);
+      el.textContent = v;
     }
-    
-    function setImage(id, src) {
+
+    function show(id, display="block") {
       const el = document.getElementById(id);
-      if (el && src) el.src = src;
+      if (el) el.style.display = display;
     }
-  
+
     async function loadProfile() {
       const bizSlug = await nsResolveBusinessSlug();
       window.NS.BUSINESS_SLUG = bizSlug;
-  
       const publicSlug = nsReadPublicSlug();
       if (!bizSlug || !publicSlug) { location.href = nsTeamLink(); return; }
-  
+
+      // Back button
+      const back = document.getElementById("btn_back");
+      if (back) back.onclick = (e) => { e.preventDefault(); location.href = nsTeamLink(); };
+
       // Business
-      const { data: biz, error: bErr } = await sb.from("business").select("id,name").eq("slug", bizSlug).maybeSingle();
+      const { data: biz, error: bErr } = await sb
+        .from("business")
+        .select("id,name")
+        .eq("slug", bizSlug)
+        .maybeSingle();
       if (bErr || !biz?.id) { location.href = nsTeamLink(); return; }
+      setText("shop_badge_name", (biz.name || "MUSE").toUpperCase());
 
-      // Footer badge (hide until ready, then show)
-      const shopBadge = document.getElementById("shop_badge");
-      if (shopBadge) {
-        shopBadge.style.visibility = "hidden";
-        shopBadge.href = nsTeamLink();
-      }
-
-      // Back Btn
-      const backBtn = document.getElementById("btn_back");
-      if (backBtn) {
-        backBtn.onclick = function(e) {
-          e.preventDefault();
-          location.href = nsTeamLink();
-        };
-      }
-
-      // Team Member (Safe query - no tiktok_handle until column is added)
+      // Team member
       const { data: tm, error: tErr } = await sb
         .from("team_members")
-        .select("id,name,role,bio,photo_url,public_slug,instagram_handle")
+        .select("id,name,role,bio,photo_url,public_slug,instagram_handle,specialties")
         .eq("business_id", biz.id)
         .eq("public_slug", publicSlug)
         .maybeSingle();
-  
       if (tErr || !tm?.id) { location.href = nsTeamLink(); return; }
-  
-      // Populate Text
-      setText("profile_name", tm.name || "Barber");
-      setText("profile_bio", tm.bio || "");
-      
+
+      // Text blocks
+      setText("profile_name", tm.name || "");
       const roleText = (tm.role || "").trim();
-      if (roleText) {
-        setText("profile_role_text", roleText);
-        document.getElementById("profile_role_wrap").style.display = "flex";
-      }
+      if (roleText) { setText("profile_role", roleText); show("profile_role","block"); }
 
-      // Avatar
-      let avatarUrl = tm.photo_url || "";
-      const { data: avatarRow } = await sb.from("gallery_image").select("image_url")
-        .eq("business_id", biz.id).eq("team_member_id", tm.id).eq("type", "team").eq("is_profile", true)
-        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      const bioText = (tm.bio || "").trim();
+      if (bioText) { setText("profile_bio", bioText); show("profile_bio","block"); }
 
+      const spec = (tm.specialties || "").trim();
+      if (spec) { setText("spec_specialty", spec); show("specs_grid","grid"); }
+
+      // Avatar priority: gallery_image profile -> team_members.photo_url
+      let avatarUrl = (tm.photo_url || "").trim();
+      const { data: avatarRow } = await sb
+        .from("gallery_image")
+        .select("image_url,created_at")
+        .eq("business_id", biz.id)
+        .eq("team_member_id", tm.id)
+        .eq("type", "team")
+        .eq("is_profile", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
       if (avatarRow?.image_url) avatarUrl = avatarRow.image_url;
-      if (!avatarUrl) avatarUrl = "https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=400";
-      setImage("profile_avatar", avatarUrl);
+      if (avatarUrl) document.getElementById("profile_avatar").src = avatarUrl;
 
-      // Socials
+      // Instagram handle
       const ig = (tm.instagram_handle || "").trim().replace(/^@/, "");
       if (ig) {
-        document.getElementById("profile_handle_wrap").style.display = "inline-flex";
-        setText("profile_handle", "@" + ig);
+        const igA = document.getElementById("profile_ig_link");
+        if (igA) {
+          igA.textContent = "@" + ig;
+          igA.href = `https://www.instagram.com/${encodeURIComponent(ig)}/`;
+        }
+        show("profile_handle_wrap","flex");
+
         const igBtn = document.getElementById("btn_instagram");
         if (igBtn) {
-          igBtn.style.display = "flex";
           igBtn.href = `https://www.instagram.com/${encodeURIComponent(ig)}/`;
-          igBtn.target = "_blank"; igBtn.rel = "noopener";
+          igBtn.target = "_blank";
+          igBtn.rel = "noopener";
+          show("btn_instagram","block");
         }
       }
 
-      // TikTok disabled until column exists
-      const ttBtn = document.getElementById("btn_tiktok");
-      if (ttBtn) ttBtn.style.display = "none";
-
-      // Booking
+      // Booking button (kept stubby)
       const bookBtn = document.getElementById("btn_book");
-      if (bookBtn) {
-        bookBtn.onclick = function(e) {
-          e.preventDefault();
-          if (typeof window.openBooking === "function") window.openBooking({ staff_id: tm.id });
-        };
-      }
+      if (bookBtn) bookBtn.onclick = (e) => { e.preventDefault(); window.openBooking({ staff_id: tm.id }); };
 
-      // Gallery with Lightbox Wiring
+      // Gallery (team photos, not profile)
       const galleryEl = document.getElementById("mini_gallery");
-      const { data: works } = await sb.from("gallery_image").select("image_url")
-        .eq("business_id", biz.id).eq("team_member_id", tm.id).eq("type", "team").eq("is_profile", false)
-        .order("created_at", { ascending: false }).limit(12);
+      const { data: works } = await sb
+        .from("gallery_image")
+        .select("image_url,created_at")
+        .eq("business_id", biz.id)
+        .eq("team_member_id", tm.id)
+        .eq("type", "team")
+        .eq("is_profile", false)
+        .order("created_at", { ascending: false })
+        .limit(12);
 
       if (galleryEl) {
-        galleryEl.innerHTML = "";
         const imgs = (works || []).map(r => r.image_url).filter(Boolean);
-        
+        galleryEl.innerHTML = "";
         if (!imgs.length) {
-          galleryEl.innerHTML = `<div style="grid-column:1/-1; opacity:.4; font-size:12px;">No recent work yet.</div>`;
+          galleryEl.innerHTML = `<div style="grid-column:1/-1; padding:16px 20px; font-size:12px; opacity:.6;">No recent work yet.</div>`;
         } else {
-          // Wiring Lightbox
-          imgs.forEach((url, idx) => {
+          imgs.forEach((url) => {
+            const cell = document.createElement("div");
+            cell.className = "feed-item";
             const img = document.createElement("img");
-            img.src = url; 
-            img.className = "gallery-img"; 
+            img.className = "feed-img";
             img.loading = "lazy";
-            img.alt = "Barber work";
-            
-            // On click -> open LB at this index
-            img.onclick = () => lbOpen(imgs, idx);
-            
-            galleryEl.appendChild(img);
+            img.src = url;
+            cell.appendChild(img);
+            galleryEl.appendChild(cell);
           });
         }
       }
 
-      // Footer - show after everything is built
-      if (shopBadge) {
-        setText("shop_badge_name", (biz.name || "BARBERSHOP").toUpperCase());
-        shopBadge.style.visibility = "visible";
-      }
-
-      // Reveal UI
-      requestAnimationFrame(() => {
-        document.body.classList.remove("ns-loading");
-      });
+      // reveal
+      requestAnimationFrame(() => document.body.classList.remove("ns-loading"));
     }
-  
+
     (async () => {
-      // Init LB controls once
-      lbWireControls();
+      if (window.lucide) lucide.createIcons();
       await loadProfile();
       if (window.lucide) lucide.createIcons();
     })();
   </script>
-
 </body>
 </html>
