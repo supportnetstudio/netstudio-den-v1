@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Customer Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
+  <style>
+    /* ═══════════════════════════════════════════
+       PORTAL 1 — THE DEN (Dark Luxury)
+       Dark bg, red accent, glass cards, Inter
+    ═══════════════════════════════════════════ */
+    :root {
+      --bg-dark: #050507;
+      --card-bg: rgba(15, 15, 18, 0.85);
+      --text-main: #fff;
+      --text-muted: rgba(255,255,255,0.6);
+      --accent: #ef4444;
+      --error: #ef4444;
+      --success: #10b981;
+      --input-bg: rgba(0,0,0,0.4);
+      --border-color: rgba(255,255,255,0.12);
+      --safe-top: env(safe-area-inset-top);
+      --safe-bottom: env(safe-area-inset-bottom);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      width: 100%;
+      min-height: 100dvh;
+      background: radial-gradient(circle at top, #1b1b22 0%, var(--bg-dark) 60%, #000 100%);
+      color: var(--text-main);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+
+      padding:
+        clamp(16px, 3vw, 28px)
+        clamp(12px, 2.5vw, 28px)
+        clamp(24px, 3vw, 32px);
+
+      transition: background 0.3s ease;
+    }
+
+    .nsd-container {
+      width: 100%;
+      max-width: 1080px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .nsd-portal-card {
+      width: 100%;
+      border-radius: 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+
+      /* Mobile: Scroll inside card */
+      max-height: calc(100dvh - 48px - var(--safe-top));
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+
+      padding: 0 24px 30px 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+
+      min-height: 420px;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Legacy/Dashboard Mode Support */
+    body.mode-dashboard { background: #050507; padding-top: 0; }
+    
+    /* PATCH 2 FIX: Allow dashboard to be wide on desktop */
+    body.mode-dashboard .nsd-container { max-width: 1080px; }
+
+    body.mode-dashboard .nsd-portal-card {
+      background: transparent; border: none; box-shadow: none;
+      backdrop-filter: none; border-radius: 0; padding: 0;
+      max-height: none; overflow: visible;
+    }
+
+    .nsd-sticky-header {
+      position: sticky; top: 0; z-index: 100;
+      margin: 0 -24px 24px -24px; padding: 24px 24px 16px 24px;
+      background: rgba(15, 15, 18, 0.95);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .nsd-back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--text-muted); text-decoration: none; font-size: 12px;
+      text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600;
+      margin-bottom: 16px; transition: color 0.2s;
+    }
+    .nsd-back-link:hover { color: #fff; }
+    .nsd-back-link svg { width: 14px; height: 14px; }
+
+    h1 {
+      font-size: 18px; text-transform: uppercase; letter-spacing: 0.2em;
+      text-align: center; margin: 0 0 6px 0; font-weight: 700;
+      font-style: italic;
+    }
+    .sub { text-align: center; font-size: 13px; opacity: 0.6; margin: 0; }
+
+    .nsd-powered {
+      text-align: center; font-size: 11px; opacity: 0.3;
+      margin-top: 20px; letter-spacing: 0.05em;
+    }
+
+    /* Loading */
+    #nsdLoadingOverlay {
+      position: fixed; inset: 0; background: rgba(5,5,7,0.9);
+      z-index: 9999; display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px); transition: opacity 0.3s;
+      opacity: 0; pointer-events: none;
+    }
+    .nsd-spinner {
+      width: 28px; height: 28px; border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.8s ease-in-out infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Tabs */
+    .nsd-tab-nav {
+      display: flex; margin-bottom: 24px; border-radius: 14px;
+      background: rgba(255,255,255,0.03); padding: 4px;
+      border: 1px solid var(--border-color);
+    }
+    .nsd-tab-nav button {
+      flex: 1; padding: 10px; border: none; border-radius: 11px;
+      background: transparent; color: rgba(255,255,255,0.5);
+      font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+    }
+    .nsd-tab-nav button.active {
+      background: var(--accent); color: #fff; font-weight: 600;
+      box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+    }
+
+    /* Forms */
+    .nsd-auth-content form { display: none; }
+    .nsd-auth-content form.active { display: block; animation: fadeIn 0.3s ease; }
+
+    label {
+      display: block; font-size: 11px; text-transform: uppercase;
+      opacity: 0.6; margin-top: 16px; margin-bottom: 6px;
+      letter-spacing: 0.05em; font-weight: 600;
+    }
+    input:not([type="checkbox"]), select {
+      width: 100%; padding: 12px 14px; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.15); background: var(--input-bg);
+      color: #fff; font-size: 15px; outline: none; transition: border-color 0.2s;
+      -webkit-appearance: none; appearance: none;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+
+    select {
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat; background-position: right 14px center; background-size: 16px; padding-right: 40px;
+    }
+
+    .btn-submit {
+      width: 100%; margin-top: 24px; padding: 14px; border-radius: 12px;
+      border: none; background: var(--accent); color: #fff;
+      font-weight: 700; font-size: 13px; letter-spacing: 0.05em;
+      text-transform: uppercase; cursor: pointer; transition: opacity 0.2s;
+    }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-submit:hover:not(:disabled) { filter: brightness(1.1); }
+
+    .nsd-status-auth {
+      margin-top: 16px; font-size: 13px; min-height: 20px;
+      text-align: center; line-height: 1.4; color: var(--error); padding: 0 10px;
+    }
+    .nsd-status-auth.success { color: var(--success); }
+
+    /* Cards */
+    .nsd-appt-card {
+      background: rgba(255,255,255,0.05); padding: 18px; border-radius: 16px;
+      margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .status {
+      display: inline-block; padding: 3px 8px; border-radius: 6px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase; margin-right: 8px;
+    }
+    .status.pending { background: rgba(252,211,77,0.2); color: #fbbf24; }
+    .status.confirmed { background: rgba(52,211,153,0.2); color: #34d399; }
+    .status.cancelled { background: rgba(239,68,68,0.2); color: #ef4444; }
+
+    .btn-tertiary {
+      padding: 8px 16px; border-radius: 99px; background: transparent;
+      border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7);
+      font-size: 11px; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-tertiary:hover { border-color: #fff; color: #fff; }
+
+    .js-slot {
+      border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.03);
+      color: #fff; border-radius: 8px; font-weight: 600;
+      transition: all 0.1s ease; font-size: 13px;
+    }
+    .js-slot:active { background: var(--accent); color: #fff; transform: scale(0.98); }
+
+    .btn-action-cancel { border-color: rgba(239,68,68,0.5); color: rgba(239,68,68,0.9); }
+    .btn-action-cancel:hover { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.1); }
+
+    .success-view { display: none; text-align: center; padding: 20px 0; }
+    input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; margin-right: 10px; }
+
+    html { background-color: #000; overscroll-behavior-y: none; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes shake { 10%,90%{transform:translate3d(-1px,0,0)} 20%,80%{transform:translate3d(2px,0,0)} 30%,50%,70%{transform:translate3d(-4px,0,0)} 40%,60%{transform:translate3d(4px,0,0)} }
+    .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+
+
+    /* ═══════════════════════════════════════════
+       DESKTOP / TABLET ADAPTATIONS
+    ═══════════════════════════════════════════ */
+
+    @media (min-width: 860px) {
+      /* PATCH 1: Use native page scrolling on desktop (no inner scroll box) */
+      .nsd-portal-card {
+        padding: 0 32px 36px 32px;
+        max-height: none;
+        overflow: visible;
+      }
+      
+      /* MICRO-POLISH: Header scrolls with page on desktop */
+      .nsd-sticky-header {
+        position: relative;
+        margin-bottom: 30px; /* slight visual tweak */
+      }
+
+      #nsdAuthView .nsd-auth-content {
+        max-width: 520px;
+        margin: 0 auto;
+      }
+
+      /* 2-Column Dashboard */
+      #nsdAppointmentsView {
+        display: grid !important;
+        grid-template-columns: 360px 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      #nsdAppointmentsView[style*="none"] {
+        display: none !important;
+      }
+
+      /* Sticky prefs card */
+      #nsdPrefsCard {
+        position: sticky;
+        top: 16px;
+      }
+
+      /* Grid Placements */
+      #nsdAppointmentsList,
+      #nsdNoAppts {
+        grid-column: 2;
+      }
+      #nsdBookingsHeader {
+        grid-column: 2;
+      }
+      #nsdSignOutFooter {
+        grid-column: 1 / -1;
+      }
+    }
+
+    /* Tablet Layout */
+    @media (min-width: 620px) and (max-width: 859px) {
+      .nsd-container { max-width: 720px; }
+      .nsd-portal-card { padding: 0 28px 34px 28px; }
+
+      #nsdAuthView .nsd-auth-content {
+        max-width: 480px;
+        margin: 0 auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="nsdLoadingOverlay"><div class="nsd-spinner"></div></div>
+
+<div class="nsd-container">
+  <div class="nsd-portal-card" id="nsdPortalCard">
+    <div class="nsd-sticky-header">
+      <a href="/" class="nsd-back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to site
+      </a>
+      <h1 id="nsdPortalTitle">Customer Portal</h1>
+      <p class="sub" id="nsdPortalSub">Manage your appointments</p>
+    </div>
+
+    <div id="nsdAuthView" style="display:none;">
+      <div class="nsd-tab-nav" id="nsdTabNav">
+        <button data-tab="signin" class="active">Sign In</button>
+        <button data-tab="signup">Create Account</button>
+      </div>
+
+      <div class="nsd-auth-content">
+        <form id="nsdSignInForm" data-tab-content="signin" class="active">
+          <label>Email <input type="email" name="email" required autocomplete="email" /></label>
+          <label>Password <input type="password" name="password" required autocomplete="current-password" /></label>
+          <button class="btn-submit" type="submit">Sign In</button>
+        </form>
+
+        <form id="nsdSignUpForm" data-tab-content="signup">
+          <label>Email <input type="email" name="email" required autocomplete="email" /></label>
+          <label>Password <input type="password" name="password" required minlength="6" autocomplete="new-password" /></label>
+          <label>Confirm Password <input type="password" name="confirm" required minlength="6" autocomplete="new-password" /></label>
+          <div style="display:flex; gap:12px;">
+            <label style="flex:1;">Name <input type="text" name="fullName" required autocomplete="name" /></label>
+            <label style="flex:1;">Phone <input type="tel" name="phone" required autocomplete="tel" /></label>
+          </div>
+          <div style="margin-top:16px; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.03);">
+            <label style="display:flex; gap:0; align-items:flex-start; margin:0; text-transform:none; letter-spacing:0; opacity:1;">
+              <input type="checkbox" id="nsdSmsConsent" style="margin-top:2px;" />
+              <span style="font-size:11px; line-height:1.45; opacity:0.85;">I agree to receive SMS texts related to my account and bookings. Msg & data rates may apply. Reply STOP to opt out.</span>
+            </label>
+          </div>
+          <button class="btn-submit" type="submit">Create Account</button>
+        </form>
+
+        <div id="nsdSuccessView" class="success-view">
+          <span style="font-size:32px; display:block; margin-bottom:12px;">📩</span>
+          <p style="font-size:15px; font-weight:600; margin-bottom:8px;">Check your email</p>
+          <p style="font-size:13px; opacity:0.7; line-height:1.5;">We've sent a verification link to your email address.</p>
+          <button class="btn-tertiary" style="margin-top:20px;" onclick="location.reload()">Back to Sign In</button>
+        </div>
+
+        <div class="nsd-status-auth" id="nsdAuthStatusMsg"></div>
+      </div>
+    </div>
+
+    <div id="nsdAppointmentsView" style="display:none;">
+      <div id="nsdPrefsCard" class="nsd-appt-card" style="margin-bottom:14px;">
+        <h3 style="margin:0 0 10px 0;">Notifications</h3>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin:14px 0;">
+          <div style="opacity:.85; font-size:14px;">Email updates</div>
+          <input type="checkbox" id="nsdEmailToggle" />
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin:14px 0 0 0;">
+          <div style="opacity:.85; font-size:14px;">SMS updates</div>
+          <input type="checkbox" id="nsdSmsToggle" />
+        </div>
+        <div style="margin-top:8px; font-size:11px; opacity:.6; line-height:1.4;">Reply STOP to opt out anytime.</div>
+        <div style="margin-top:16px;">
+          <label style="margin:0 0 6px 0; opacity:.7;">Phone (for SMS)</label>
+          <input id="nsdPhoneInput" type="tel" placeholder="+1XXXXXXXXXX" style="font-size:14px;" />
+        </div>
+        <div id="nsdReconsentWrap" style="display:none; margin-top:12px; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.03);">
+          <label style="display:flex; gap:0; align-items:flex-start; margin:0; text-transform:none; letter-spacing:0; opacity:1;">
+            <input type="checkbox" id="nsdReconsent" style="margin-top:2px;" />
+            <span style="font-size:11px; line-height:1.45; opacity:0.85;">I agree to receive SMS texts related to my account and bookings. Msg & data rates may apply. Reply STOP to opt out.</span>
+          </label>
+        </div>
+        <div id="nsdPrefsMsg" style="margin-top:10px; font-size:12px; font-weight:600; color:var(--success); min-height:18px;"></div>
+        <div style="display:flex; gap:10px; margin-top:12px;">
+          <button id="nsdPrefsSave" class="btn-submit" style="margin-top:0; flex:1;" disabled>Save</button>
+        </div>
+      </div>
+
+      <div id="nsdBookingsHeader" style="font-size:11px; text-transform:uppercase; opacity:0.5; margin:24px 0 12px;">Your Bookings</div>
+      
+      <div id="nsdAppointmentsList"></div>
+      <p id="nsdNoAppts" style="display:none; text-align:center; opacity:0.5; font-size:13px; margin-top:30px;">No upcoming appointments.</p>
+
+      <div id="nsdSignOutFooter" style="margin-top:40px; text-align:center; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px; padding-bottom:40px;">
+        <button class="btn-tertiary nsd-sign-out-btn">Sign Out</button>
+      </div>
+    </div>
+
+    <div class="nsd-powered">Powered by Net Studio</div>
+  </div>
+</div>
+
+<script type="module" src="portal-engine.js"></script>
+
+</body>
+</html>
+
