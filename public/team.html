@@ -218,13 +218,13 @@
       const slug = window.NS?.BUSINESS_SLUG || nsGetSlugFromHost();
       if (!slug) return targetPath;
 
-      // Production: clean paths, no ?b=
+      // Production: no ?b=
       if (!nsShouldUseQuerySlug()) return targetPath;
 
-      // Preview: keep ?b=slug
-      const u = new URL(targetPath, location.href);
+      // Preview: add ?b=slug to BOTH route paths (/team) and files (about.html)
+      const u = new URL(targetPath, location.origin);
       u.searchParams.set("b", slug);
-      return u.pathname + "?" + u.searchParams.toString() + u.hash;
+      return u.pathname + "?" + u.searchParams.toString();
     }
 
     function nsProfileLink(publicSlug) {
@@ -287,6 +287,10 @@
           }
         }
       });
+
+      // Hard lock Team link
+      const teamA = document.querySelector('a.nav-link[data-page="/team"]');
+      if (teamA) teamA.setAttribute("href", nsLinkWithSlug("/team"));
     }
 
     /* --- INIT CONFIG --- */
@@ -368,7 +372,7 @@
         return;
       }
 
-      // UPDATED: Fetching id AND name to set logos
+      // Fetching id AND name to set logos
       const { data: biz, error: bErr } = await sb
         .schema("public")
         .from("business")
@@ -382,7 +386,7 @@
         return;
       }
 
-      // UPDATED: Set Logos
+      // Set Logos
       if (biz.name) {
         const nameUpper = biz.name.toUpperCase();
         const hLogo = document.getElementById("header_logo");
@@ -391,7 +395,7 @@
         if (fLogo) fLogo.textContent = nameUpper;
       }
 
-      // UPDATED: Added public_slug to select
+      // Added public_slug to select
       const { data: members, error: mErr } = await sb
         .schema("public")
         .from("team_members")
@@ -471,7 +475,7 @@
       if (elT && text) elT.textContent = text;
     }
 
-    // ✅ Booking (Modern object API only)
+    // Booking (Modern object API only)
     window.openBookingWithStaff = function(staffId) {
       if (typeof window.openBooking !== "function") return;
       window.openBooking({ staff_id: staffId });
