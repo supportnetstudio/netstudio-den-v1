@@ -26,6 +26,7 @@ const els = {
   authView: document.getElementById("nsdAuthView"),
   apptsView: document.getElementById("nsdAppointmentsView"),
   authMsg: document.getElementById("nsdAuthStatusMsg"),
+  tabNav: document.getElementById("nsdTabNav"), // ✅ Added
   forms: {
     signin: document.getElementById("nsdSignInForm"),
     signup: document.getElementById("nsdSignUpForm"),
@@ -95,8 +96,6 @@ const Utils = {
 };
 
 // ── BUSINESS RESOLUTION ──
-// We match your booking redirect:
-// /customer-portal.html?business_id=...
 function resolveBusinessIdFromUrlOrCache() {
   const qs = new URLSearchParams(location.search);
   const bid = (qs.get("business_id") || "").trim();
@@ -112,14 +111,12 @@ function resolveBusinessIdFromUrlOrCache() {
 }
 
 async function resolveBusinessId() {
-  // 1) direct
   const direct = resolveBusinessIdFromUrlOrCache();
   if (direct) {
     state.businessId = direct;
     return direct;
   }
 
-  // 2) fallback: custom domain lookup
   const host = location.hostname.toLowerCase();
   const { data, error } = await state.supabase
     .from("business")
@@ -225,11 +222,6 @@ async function loadDashboard() {
 
   try {
     const prefs = await fetchCustomerPrefs();
-    // If you have prefs UI in your HTML, keep it. If not, no problem.
-    if (!prefs) {
-      // not fatal
-    }
-
     const { data: appts, error: apptError } = await state.supabase
       .from("bookings")
       .select("id, status, start_at, team_member_menu_items(name)")
@@ -304,8 +296,7 @@ async function handleSignUp(e) {
 
   try {
     const smsOptIn = !!document.getElementById("nsdSmsConsent")?.checked;
-    const consentText =
-      "I agree to receive SMS texts related to my account and bookings. Msg & data rates may apply. Reply STOP to opt out.";
+    const consentText = "I agree to receive SMS texts related to my account and bookings. Msg & data rates may apply. Reply STOP to opt out.";
     const redirectUrl = CONFIG.REDIRECT_URL || `${location.origin}/verified`;
 
     const { error } = await state.supabase.auth.signUp({
@@ -344,6 +335,26 @@ async function handleSignUp(e) {
   }
 
   CONFIG.REDIRECT_URL = `${location.origin}/verified`;
+
+  // ✅ TAB SWITCHING (Sign In / Create Account)
+  if (els.tabNav) {
+    els.tabNav.addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn || !btn.dataset.tab) return;
+
+      // toggle active tab button
+      els.tabNav.querySelectorAll("button[data-tab]").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      // toggle active form panel
+      document.querySelectorAll("[data-tab-content]").forEach((panel) => panel.classList.remove("active"));
+      const target = document.querySelector(`[data-tab-content="${btn.dataset.tab}"]`);
+      if (target) target.classList.add("active");
+
+      // clear status msg
+      if (els.authMsg) els.authMsg.textContent = "";
+    });
+  }
 
   if (els.forms.signin) els.forms.signin.addEventListener("submit", handleSignIn);
   if (els.forms.signup) els.forms.signup.addEventListener("submit", handleSignUp);
