@@ -1,9 +1,9 @@
 /**
- * NetStudio Booking Engine v3.6
+ * NetStudio Booking Engine v3.7
  * - Robust Time Parsing (Fixes 12:xx PM edge cases)
  * - Safe Service Lookup (maybeSingle everywhere)
  * - Customer Upsert via Email OR Phone
- * - Dual API Support
+ * - Updated Portal Route: /customer-portal.html
  */
 (async function () {
   if (window.__NSD_BOOKING_INIT__) return;
@@ -62,8 +62,7 @@
   // 3. Config
   const CFG = window.NetStudioConfig || {
     supabaseUrl: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
-    supabaseAnonKey:
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
+    supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
   };
 
   // 4. State Management
@@ -220,15 +219,13 @@
     m.classList.add("active");
     document.body.style.overflow = "hidden";
   
-    // Accept object API: openBooking({ staff_id })
     let staffId = null;
     if (opts && typeof opts === "object") {
       staffId = opts.staff_id || opts.team_member_id || null;
     } else if (typeof opts === "string") {
-      staffId = opts; // Backward compatible fallback
+      staffId = opts;
     }
   
-    // Preselect barber if provided
     const sel = document.getElementById("nsdBarber");
     if (staffId && sel) {
       sel.value = staffId;
@@ -375,7 +372,6 @@
     }
 
     const { data: items, error } = await query;
-
     svcDropdown.innerHTML = "<option value=''>Select Service</option>";
 
     if (error || !items || !items.length) {
@@ -384,7 +380,6 @@
     }
 
     items.forEach((s) => {
-      // Display duration in the dropdown for clarity
       const duration = s.duration_min ? ` - ${s.duration_min}m` : "";
       const label = `${s.name} ($${money(s.price_cents)}${duration})`;
       svcDropdown.appendChild(new Option(label, s.id));
@@ -394,9 +389,13 @@
   // 11. Event Wiring
   document.getElementById("nsdCloseBtn").addEventListener("click", window.closeBooking);
   document.getElementById("nsdGateGuest").onclick = () => setStep(1);
+  
+  // ✅ PATCH: Correct redirect to portal file with query parameter
   document.getElementById("nsdGatePortal").onclick = () => {
-    window.location.href = `/customer-portal?business_id=${encodeURIComponent(BUSINESS_ID)}`;
+    const url = `/customer-portal.html?business_id=${encodeURIComponent(BUSINESS_ID)}`;
+    window.location.href = url;
   };
+
   document.getElementById("nsdPrevMonth").onclick = () => { viewDate.setMonth(viewDate.getMonth() - 1); renderCalendar(); };
   document.getElementById("nsdNextMonth").onclick = () => { viewDate.setMonth(viewDate.getMonth() + 1); renderCalendar(); };
   document.getElementById("nsdCalContinue").onclick = () => {
@@ -410,11 +409,10 @@
   document.getElementById("nsdTimeContinue").onclick = () => { setStep(3); loadServices(); };
   document.getElementById("nsdBackToTime").onclick = () => setStep(2);
 
-  // 12. Submit Logic - V3.6 (Robust Time Parse + Safe Lookup) ✅
+  // 12. Submit Logic
   document.getElementById("nsdSubmitBtn").onclick = async () => {
     const btn = document.getElementById("nsdSubmitBtn");
     
-    // Inputs
     const selectedTimeLabel = document.getElementById("nsdTimeValue").value;
     const dateOnly = selectedDate.toISOString().split("T")[0];
     const clientName = document.getElementById("nsdClientName").value.trim();
@@ -430,13 +428,10 @@
     btn.disabled = true;
     btn.textContent = "Verifying...";
 
-    // --- STEP 0: DUAL-PATH SERVICE LOOKUP + SELF-HEALING ---
     let svcRow = null;
     let svcData = null;
     let svcErr = null;
 
-    // Try 1: Lookup as team_member_menu_items.id
-    // ✅ PATCH: Safe lookup with maybeSingle
     {
       const r1 = await supabase
         .from("team_member_menu_items")
@@ -451,14 +446,13 @@
       }
     }
 
-    // Try 2: Lookup as menu_item_id (Legacy / Fallback)
     if (!svcData) {
       const r2 = await supabase
         .from("team_member_menu_items")
         .select("id, duration_min, menu_item_id") 
         .eq("menu_item_id", selectedServiceId)
         .eq("business_id", BUSINESS_ID)
-        .limit(1) // ✅ Prevent crash if duplicates exist
+        .limit(1)
         .maybeSingle(); 
 
       if (!r2.error && r2.data) {
@@ -467,27 +461,14 @@
       }
     }
 
-    // Self-Healing Block
     if (svcErr || !svcData) {
-      console.warn("NSD: Service lookup failed, forcing fallback duration", svcErr?.message);
-      svcRow = {
-        id: selectedServiceId,
-        menu_item_id: selectedServiceId, 
-        duration_min: 30
-      };
+      svcRow = { id: selectedServiceId, menu_item_id: selectedServiceId, duration_min: 30 };
     } else {
       svcRow = svcData;
-      if (!svcRow.duration_min) {
-        console.warn("NSD: Service missing duration, forcing 30min default");
-        svcRow.duration_min = 30;
-      }
-      if (!svcRow.menu_item_id) {
-        console.warn("NSD: Service missing parent menu_item_id, mirroring id");
-        svcRow.menu_item_id = svcRow.id;
-      }
+      if (!svcRow.duration_min) svcRow.duration_min = 30;
+      if (!svcRow.menu_item_id) svcRow.menu_item_id = svcRow.id;
     }
 
-    // --- STEP 1: UPSERT CUSTOMER (email OR phone) ✅ ---
     const customerPayload = {
       business_id: BUSINESS_ID,
       email: clientEmail || null,
@@ -498,8 +479,6 @@
     };
 
     let customerId = null;
-
-    // Prefer email match if provided, else phone match
     let find = supabase.from("customers").select("id");
     if (clientEmail) {
       find = find.eq("business_id", BUSINESS_ID).eq("email", clientEmail);
@@ -518,11 +497,8 @@
 
     if (existingCustomer?.id) {
       customerId = existingCustomer.id;
-      // Update existing customer info
-      const { error: uErr } = await supabase.from("customers").update(customerPayload).eq("id", customerId);
-      if (uErr) console.warn("NSD: customer update failed", uErr.message);
+      await supabase.from("customers").update(customerPayload).eq("id", customerId);
     } else {
-      // Create new customer
       const { data: newCustomer, error: createErr } = await supabase
         .from("customers")
         .insert([customerPayload])
@@ -538,10 +514,7 @@
       customerId = newCustomer.id;
     }
 
-    // --- STEP 2: CREATE BOOKING ---
     const combinedDate = new Date(selectedDate);
-    
-    // ✅ PATCH: Robust Time Parsing
     const m = selectedTimeLabel.match(/(\d{1,2}):(\d{2})\s*([AP]M)/i);
     if (!m) {
       alert("Invalid time selected.");
