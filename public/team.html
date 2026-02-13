@@ -28,7 +28,7 @@
       --glass: rgba(255, 255, 255, 0.05);
       --glass-border: rgba(255, 255, 255, 0.1);
       --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-      --header-height: 70px;
+      --header-height: 70px; /* keep for sizing if you want, but no fixed header */
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,7 +41,7 @@
       color: var(--text-main);
       font-family: var(--font-body);
       line-height: 1.6;
-      padding-top: var(--header-height);
+      padding-top: 0;
     }
 
     .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; }
@@ -68,9 +68,12 @@
     .btn-outline:hover { border-color: white; color: white; }
 
     header {
-      position: fixed; top: 0; width: 100%; z-index: 100;
+      position: relative;
+      width: 100%;
+      z-index: 10;
       height: var(--header-height);
-      background: rgba(0,0,0,0.8); backdrop-filter: blur(12px);
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--glass-border);
     }
     .nav-wrap {
@@ -134,10 +137,10 @@
         <a class="nav-link" href="index.html" data-page="index.html">Home</a>
         <a class="nav-link" href="about.html" data-page="about.html">About</a>
         <a class="nav-link" href="services.html" data-page="services.html">Services</a>
-        <a class="nav-link" href="team.html" data-page="team.html">Team</a>
+        <a class="nav-link" href="/team" data-page="/team">Team</a>
       </nav>
 
-      <a href="#" class="btn" onclick="openBooking(); return false;" style="padding: 8px 16px; font-size: 11px;">Book Now</a>
+      <a href="#" class="btn" onclick="(window.openBooking ? openBooking() : alert('Booking is loading...')); return false;" style="padding: 8px 16px; font-size: 11px;">Book Now</a>
     </div>
   </header>
 
@@ -270,9 +273,19 @@
         const page = a.getAttribute("data-page") || a.getAttribute("href") || "index.html";
         a.setAttribute("href", nsLinkWithSlug(page));
 
-        const current = (location.pathname.split("/").pop() || "index.html").toLowerCase();
-        if (page.toLowerCase() === current) a.classList.add("active");
-        else a.classList.remove("active");
+        const currentPath = (location.pathname || "/").toLowerCase();
+        const targetPath = (page || "").toLowerCase();
+        
+        if (targetPath === "/team" && currentPath === "/team") {
+          a.classList.add("active");
+        } else {
+          const current = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+          if (targetPath.endsWith(current)) {
+            a.classList.add("active");
+          } else {
+            a.classList.remove("active");
+          }
+        }
       });
     }
 
