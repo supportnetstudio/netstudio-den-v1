@@ -1,17 +1,17 @@
 /**
- * Net Studio Booking Page Engine v1.0
+ * Net Studio Booking Page Engine v1.1
  * File: booking-engine.js
  * Works with /book.html scaffold (nsb* ids)
  *
  * Features:
- * - Business ID resolve (DOM > localStorage > ?business_id=)
+ * - Business ID resolve (DOM > localStorage > ?business_id= > slug > custom domain)
  * - Loads business name/tagline
- * - Loads global business hours + staff hours override when barber selected
+ * - Loads global business hours + staff hours override
  * - Calendar + 30-min time slots
  * - Service dropdown (menu_items OR team_member_menu_items fallback)
  * - Customer upsert via email OR phone
  * - Booking insert
- * - Portal link -> /customer-portal.html?business_id=...
+ * - Portal link -> /customer-portal.html with slug preservation
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -38,10 +38,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
   };
 
   // -----------------------------
-  // Resolve business_id
+  // Resolve business_id (Initial synchronous check)
   // -----------------------------
   const getBusinessIdNow = () => {
     const el =
+      document.querySelector("#nsbBusiness[data-business-id]") ||
       document.querySelector("#nsdBusiness[data-business-id]") ||
       (document.body?.dataset?.businessId ? document.body : null) ||
       document.querySelector("[data-business-id]");
@@ -66,15 +67,63 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
     return "";
   };
 
-  const BUSINESS_ID = getBusinessIdNow();
-  if (!BUSINESS_ID) {
-    console.error("Booking: Missing business_id");
-    alert("System Error: Business ID missing.");
-    return;
+  // -----------------------------
+  // Domain & Slug Helpers
+  // -----------------------------
+  function nsGetSlugFromHost() {
+    const qp = new URLSearchParams(location.search).get("b");
+    if (qp) return String(qp).trim().toLowerCase();
+
+    const host = (location.hostname || "").toLowerCase();
+    const ROOT = "netstudiodevelopment.com";
+    if (!host || host === "localhost" || host.startsWith("127.")) return null;
+    if (host === ROOT || host === "www." + ROOT) return null;
+
+    if (host.endsWith("." + ROOT)) {
+      const slug = host.slice(0, -(ROOT.length + 1)).split(".")[0];
+      return slug || null;
+    }
+    return null;
+  }
+
+  function nsApexHost() {
+    const h = (location.hostname || "").toLowerCase();
+    return h.startsWith("www.") ? h.slice(4) : h;
+  }
+
+  function nsIsDevHost() {
+    const host = (location.hostname || "").toLowerCase();
+    return host.endsWith(".pages.dev") || host.endsWith(".workers.dev") || host === "localhost" || host.startsWith("127.");
+  }
+
+  async function resolveBusinessIdFallback(supabase) {
+    // 1) try slug
+    const slug = nsGetSlugFromHost();
+    if (slug) {
+      const { data, error } = await supabase
+        .from("business")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (!error && data?.id) return data.id;
+    }
+
+    // 2) try custom domain (only on real domains)
+    if (!nsIsDevHost()) {
+      const apex = nsApexHost();
+      const { data, error } = await supabase
+        .from("business")
+        .select("id")
+        .eq("custom_domain", apex)
+        .maybeSingle();
+      if (!error && data?.id) return data.id;
+    }
+
+    return "";
   }
 
   // -----------------------------
-  // Supabase client
+  // Supabase client & ID Resolution
   // -----------------------------
   const CFG = window.NetStudioConfig || {
     supabaseUrl: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
@@ -84,14 +133,33 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
   const supabase = createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
 
+  let BUSINESS_ID = getBusinessIdNow();
+
+  if (!BUSINESS_ID) {
+    BUSINESS_ID = await resolveBusinessIdFallback(supabase);
+
+    if (BUSINESS_ID) {
+      try { localStorage.setItem("ns_business_id", BUSINESS_ID); } catch {}
+      const hook =
+        document.querySelector("#nsbBusiness") ||
+        document.querySelector("#nsdBusiness") ||
+        document.querySelector("[data-business-id]");
+      if (hook) hook.dataset.businessId = BUSINESS_ID;
+    }
+  }
+
+  if (!BUSINESS_ID) {
+    console.error("Booking: Missing business_id (slug/custom domain fallback failed)");
+    alert("System Error: Business not found for this domain.");
+    return;
+  }
+
   // -----------------------------
   // State
   // -----------------------------
   const DAY_KEYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
-
   let viewDate = new Date();
   viewDate.setDate(1);
-
   let selectedDate = null;
   let selectedTimeLabel = "";
   let globalBizHours = {};
@@ -110,7 +178,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
   };
 
   // -----------------------------
-  // Back link behavior
+  // Back link & Portal logic
   // -----------------------------
   $("nsbBackLink")?.addEventListener("click", () => {
     const ref = document.referrer;
@@ -118,9 +186,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
     else location.href = "/";
   });
 
-  // Portal link
   $("nsbPortalLink")?.addEventListener("click", () => {
-    location.href = `/customer-portal.html?business_id=${encodeURIComponent(BUSINESS_ID)}`;
+    const u = new URL("/customer-portal.html", location.origin);
+    u.searchParams.set("business_id", BUSINESS_ID);
+
+    const slug = new URLSearchParams(location.search).get("b");
+    if (slug) u.searchParams.set("b", slug);
+
+    location.href = u.pathname + "?" + u.searchParams.toString();
   });
 
   // -----------------------------
@@ -169,7 +242,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
           $("nsbCalContinue").disabled = false;
         });
       }
-
       grid.appendChild(btn);
     }
   }
@@ -191,7 +263,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
       return;
     }
 
-    // Parse open/close
     const [hStart, mStart] = String(hours.open_time || "09:00").split(":");
     const [hEnd, mEnd] = String(hours.close_time || "17:00").split(":");
 
@@ -231,7 +302,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
   }
 
   // -----------------------------
-  // Staff hours override
+  // Staff & Services
   // -----------------------------
   async function handleBarberChange() {
     const barberId = $("nsbBarber").value || "";
@@ -261,10 +332,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
     renderCalendar();
   }
 
-  // -----------------------------
-  // Services loader
-  // Prefers team_member_menu_items, falls back to menu_items
-  // -----------------------------
   const money = (cents) => (Number(cents || 0) / 100).toFixed(2);
 
   async function loadServices() {
@@ -272,10 +339,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
     if (!svc) return;
 
     svc.innerHTML = `<option value="">Loading...</option>`;
-
     const barberId = $("nsbBarber")?.value || "";
 
-    // 1) team_member_menu_items
     let q1 = supabase
       .from("team_member_menu_items")
       .select("id, name, price_cents, duration_min, menu_item_id")
@@ -296,7 +361,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
       return;
     }
 
-    // 2) menu_items fallback
     const r2 = await supabase
       .from("menu_items")
       .select("id, name, price_cents, duration_min")
@@ -332,11 +396,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
   $("nsbCalContinue")?.addEventListener("click", async () => {
     if (!selectedDate) return;
-
     $("nsbStep2DateLabel").textContent = selectedDate.toLocaleDateString(undefined, {
       weekday: "long", month: "short", day: "numeric",
     });
-
     setStep(2);
     $("nsbTimeContinue").disabled = true;
     $("nsbTimeValue").value = "";
@@ -344,21 +406,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
     await renderTimeSlots();
   });
 
-  $("nsbBackToDate")?.addEventListener("click", () => {
-    setStep(1);
-  });
+  $("nsbBackToDate")?.addEventListener("click", () => setStep(1));
 
   $("nsbTimeContinue")?.addEventListener("click", async () => {
     setStep(3);
     await loadServices();
   });
 
-  $("nsbBackToTime")?.addEventListener("click", () => {
-    setStep(2);
-  });
+  $("nsbBackToTime")?.addEventListener("click", () => setStep(2));
 
   $("nsbBarber")?.addEventListener("change", async () => {
-    // Reset selections when staff changes
     selectedDate = null;
     selectedTimeLabel = "";
     $("nsbCalContinue").disabled = true;
@@ -370,23 +427,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
   });
 
   // -----------------------------
-  // Submit (customer upsert + booking insert)
+  // Submit (Customer + Booking)
   // -----------------------------
   function parseSelectedTimeToISO(dateObj, timeLabel) {
-    // "12:30 PM"
     const m = String(timeLabel || "").match(/(\d{1,2}):(\d{2})\s*([AP]M)/i);
     if (!m) return null;
-
     let hh = parseInt(m[1], 10);
     const mm = parseInt(m[2], 10);
     const ap = m[3].toUpperCase();
-
-    if (ap === "AM") {
-      if (hh === 12) hh = 0;
-    } else {
-      if (hh !== 12) hh += 12;
-    }
-
+    if (ap === "AM") { if (hh === 12) hh = 0; }
+    else { if (hh !== 12) hh += 12; }
     const dt = new Date(dateObj);
     dt.setHours(hh, mm, 0, 0);
     return dt.toISOString();
@@ -394,88 +444,54 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
   $("nsbSubmitBtn")?.addEventListener("click", async () => {
     const btn = $("nsbSubmitBtn");
-    if (!btn) return;
-
     const serviceId = $("nsbService")?.value || "";
     const name = ($("nsbClientName")?.value || "").trim();
     const phone = ($("nsbClientPhone")?.value || "").trim();
     const email = ($("nsbClientEmail")?.value || "").trim();
     const smsOptIn = !!$("nsbSmsConsent")?.checked;
 
-    if (!selectedDate || !selectedTimeLabel) {
-      alert("Please select a date and time.");
-      return;
-    }
-    if (!serviceId || !name || !phone) {
-      alert("Please fill in Name, Phone, and Service.");
-      return;
-    }
+    if (!selectedDate || !selectedTimeLabel) return alert("Please select date/time.");
+    if (!serviceId || !name || !phone) return alert("Please fill in Name, Phone, and Service.");
 
     btn.disabled = true;
     btn.textContent = "Processing...";
     setLoading(true);
 
     try {
-      // 1) Determine service row (team_member_menu_items OR menu_items)
       let teamMemberMenuItemId = null;
       let menuItemId = null;
 
-      // Try team_member_menu_items by id
-      const rA = await supabase
-        .from("team_member_menu_items")
-        .select("id, menu_item_id")
-        .eq("id", serviceId)
-        .maybeSingle();
-
+      const rA = await supabase.from("team_member_menu_items").select("id, menu_item_id").eq("id", serviceId).maybeSingle();
       if (!rA.error && rA.data) {
         teamMemberMenuItemId = rA.data.id;
         menuItemId = rA.data.menu_item_id || rA.data.id;
       } else {
-        // fallback menu_items
         menuItemId = serviceId;
       }
 
-      // 2) Customer upsert (email OR phone)
-      const customerPayload = {
-        business_id: BUSINESS_ID,
-        email: email || null,
-        name,
-        phone,
-        sms_opt_in: smsOptIn,
-        email_opt_in: !!email,
-      };
-
+      const customerPayload = { business_id: BUSINESS_ID, email: email || null, name, phone, sms_opt_in: smsOptIn, email_opt_in: !!email };
       let find = supabase.from("customers").select("id");
       if (email) find = find.eq("business_id", BUSINESS_ID).eq("email", email);
       else find = find.eq("business_id", BUSINESS_ID).eq("phone", phone);
 
       const found = await find.maybeSingle();
-      if (found.error) throw new Error("Customer lookup failed: " + found.error.message);
-
       let customerId = found.data?.id || null;
 
       if (customerId) {
-        const upd = await supabase.from("customers").update(customerPayload).eq("id", customerId);
-        if (upd.error) console.warn("Customer update warn:", upd.error.message);
+        await supabase.from("customers").update(customerPayload).eq("id", customerId);
       } else {
         const ins = await supabase.from("customers").insert([customerPayload]).select("id").single();
-        if (ins.error) throw new Error("Customer create failed: " + ins.error.message);
         customerId = ins.data.id;
       }
 
-      // 3) Booking insert
       const startAt = parseSelectedTimeToISO(selectedDate, selectedTimeLabel);
-      if (!startAt) throw new Error("Invalid time selected.");
-
-      const dateOnly = selectedDate.toISOString().split("T")[0];
-
       const payload = {
         business_id: BUSINESS_ID,
         team_member_id: $("nsbBarber")?.value || null,
         menu_item_id: menuItemId,
         team_member_menu_item_id: teamMemberMenuItemId,
         start_at: startAt,
-        date_only: dateOnly,
+        date_only: selectedDate.toISOString().split("T")[0],
         time_label: selectedTimeLabel,
         client_name: name,
         client_phone: phone,
@@ -488,16 +504,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
       };
 
       const res = await supabase.from("bookings").insert([payload]);
-      if (res.error) throw new Error("Booking Error: " + res.error.message);
+      if (res.error) throw new Error(res.error.message);
 
-      // Success UI
       document.querySelectorAll(".nsb-step").forEach((s) => (s.style.display = "none"));
       hide($("nsbStepLabel"));
       $("nsbSuccessView").style.display = "";
       $("nsbSuccessDetails").textContent = `${payload.date_only} @ ${payload.time_label}`;
 
     } catch (err) {
-      console.error(err);
       alert(err?.message || "Booking failed.");
       btn.disabled = false;
       btn.textContent = "Confirm Booking";
@@ -507,56 +521,29 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
   });
 
   // -----------------------------
-  // INIT: load business + hours + team, start on Step 1
+  // INIT
   // -----------------------------
   setLoading(true);
 
-  // Business display
-  const bizRes = await supabase
-    .from("business")
-    .select("name,bio,shop_bio")
-    .eq("id", BUSINESS_ID)
-    .maybeSingle();
-
+  const bizRes = await supabase.from("business").select("name,bio,shop_bio").eq("id", BUSINESS_ID).maybeSingle();
   if (bizRes?.data) {
     $("nsbShopName").textContent = bizRes.data.name || "Book";
     $("nsbShopTagline").textContent = bizRes.data.shop_bio || bizRes.data.bio || "";
-  } else {
-    $("nsbShopName").textContent = "Book";
   }
 
-  // Business hours
-  const hrsRes = await supabase
-    .from("business_hours")
-    .select("*")
-    .eq("business_id", BUSINESS_ID);
-
+  const hrsRes = await supabase.from("business_hours").select("*").eq("business_id", BUSINESS_ID);
   (hrsRes.data || []).forEach((r) => {
     const k = String(r.day_of_week || "").toLowerCase();
     if (k) globalBizHours[k] = r;
   });
-
   activeHours = { ...globalBizHours };
 
-  // Team members
-  const teamRes = await supabase
-    .from("team_members")
-    .select("id,name")
-    .eq("business_id", BUSINESS_ID)
-    .eq("is_active", true)
-    .eq("accepts_bookings", true)
-    .not("auth_user_id", "is", null)
-    .order("name");
-
+  const teamRes = await supabase.from("team_members").select("id,name").eq("business_id", BUSINESS_ID).eq("is_active", true).eq("accepts_bookings", true).not("auth_user_id", "is", null).order("name");
   (teamRes.data || []).forEach((m) => {
     $("nsbBarber")?.appendChild(new Option(m.name, m.id));
   });
 
-  // Default state
-  $("nsbCalContinue").disabled = true;
-  $("nsbTimeContinue").disabled = true;
   setStep(1);
   renderCalendar();
-
   setLoading(false);
 })();
