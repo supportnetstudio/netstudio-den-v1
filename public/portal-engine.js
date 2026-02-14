@@ -1,7 +1,6 @@
 // ============================================================
 // Net Studio — Customer Portal Engine (Shared)
 // Put this in: /public/portal-engine.js
-// customer-portal.html must load it with: <script type="module" src="./portal-engine.js"></script>
 // ============================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -10,7 +9,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 const CONFIG = {
   URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
   KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-  REDIRECT_URL: null,
+  REDIRECT_URL: `${location.origin}/verified.html`, // Updated to repo page
 };
 
 // ── STATE ──
@@ -26,7 +25,7 @@ const els = {
   authView: document.getElementById("nsdAuthView"),
   apptsView: document.getElementById("nsdAppointmentsView"),
   authMsg: document.getElementById("nsdAuthStatusMsg"),
-  tabNav: document.getElementById("nsdTabNav"), // ✅ Added
+  tabNav: document.getElementById("nsdTabNav"),
   forms: {
     signin: document.getElementById("nsdSignInForm"),
     signup: document.getElementById("nsdSignUpForm"),
@@ -163,16 +162,6 @@ async function fetchCustomerPrefs() {
   return data || null;
 }
 
-async function saveCustomerPrefs(patch) {
-  const { error } = await state.supabase
-    .from("customers")
-    .update(patch)
-    .eq("id", state.customerId)
-    .eq("business_id", state.businessId);
-
-  if (error) throw error;
-}
-
 // ── DASHBOARD ──
 function renderAppointments(appts) {
   if (!els.list) return;
@@ -221,7 +210,7 @@ async function loadDashboard() {
   }
 
   try {
-    const prefs = await fetchCustomerPrefs();
+    await fetchCustomerPrefs();
     const { data: appts, error: apptError } = await state.supabase
       .from("bookings")
       .select("id, status, start_at, team_member_menu_items(name)")
@@ -242,9 +231,6 @@ async function loadDashboard() {
     console.error(err);
     Utils.showError("Failed to load dashboard. Please sign in again.");
     await state.supabase.auth.signOut();
-    if (els.authView) els.authView.style.display = "block";
-    if (els.apptsView) els.apptsView.style.display = "none";
-    document.body.classList.remove("mode-dashboard");
   } finally {
     Utils.toggleLoading(false);
   }
@@ -272,8 +258,6 @@ async function handleSignIn(e) {
     Utils.showError(err.message);
     btn.disabled = false;
     btn.textContent = "Sign In";
-    const { data: s } = await state.supabase.auth.getSession();
-    if (s?.session) await state.supabase.auth.signOut();
   }
 }
 
@@ -297,7 +281,9 @@ async function handleSignUp(e) {
   try {
     const smsOptIn = !!document.getElementById("nsdSmsConsent")?.checked;
     const consentText = "I agree to receive SMS texts related to my account and bookings. Msg & data rates may apply. Reply STOP to opt out.";
-    const redirectUrl = CONFIG.REDIRECT_URL || `${location.origin}/verified`;
+    
+    // Patch: Ensure redirectUrl uses the verified.html file
+    const redirectUrl = CONFIG.REDIRECT_URL || `${location.origin}/verified.html`;
 
     const { error } = await state.supabase.auth.signUp({
       email,
@@ -334,24 +320,16 @@ async function handleSignUp(e) {
     return;
   }
 
-  CONFIG.REDIRECT_URL = `${location.origin}/verified`;
-
-  // ✅ TAB SWITCHING (Sign In / Create Account)
+  // ✅ TAB SWITCHING
   if (els.tabNav) {
     els.tabNav.addEventListener("click", (e) => {
       const btn = e.target.closest("button");
       if (!btn || !btn.dataset.tab) return;
-
-      // toggle active tab button
       els.tabNav.querySelectorAll("button[data-tab]").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-
-      // toggle active form panel
       document.querySelectorAll("[data-tab-content]").forEach((panel) => panel.classList.remove("active"));
       const target = document.querySelector(`[data-tab-content="${btn.dataset.tab}"]`);
       if (target) target.classList.add("active");
-
-      // clear status msg
       if (els.authMsg) els.authMsg.textContent = "";
     });
   }
@@ -384,12 +362,10 @@ async function handleSignUp(e) {
       await loadDashboard();
     } catch {
       await state.supabase.auth.signOut();
-      if (els.authView) els.authView.style.display = "block";
       Utils.toggleLoading(false);
     }
   } else {
     if (els.authView) els.authView.style.display = "block";
-    if (els.apptsView) els.apptsView.style.display = "none";
     Utils.toggleLoading(false);
   }
 })();
