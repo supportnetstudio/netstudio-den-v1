@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -47,7 +46,7 @@
     .nsb-checkbox input { margin-right:8px; accent-color:var(--accent); width:16px; height:16px; }
     .nsb-success { background:rgba(34,197,94,0.15); color:#34d399; border:1px solid rgba(34,197,94,0.4); border-radius:var(--radius); padding:16px; margin-bottom:16px; text-align:center; }
     .nsb-powered { text-align:center; font-size:11px; opacity:0.3; margin-top:20px; }
-    #nsbLoadingOverlay { position:fixed; inset:0; background:rgba(5,5,7,0.9); z-index:9999; display:flex; align-items:center; justify-content:center; transition:opacity 0.3s; opacity:0; pointer-events:none; }
+    #nsbLoadingOverlay { position:fixed; inset:0; background:rgba(5,5,7,0.9); z-index:9999; display:flex; align-items:center; justify-content:center; transition:opacity .2s ease; opacity:0; pointer-events:none; }
     .nsb-spinner { width:28px; height:28px; border:3px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s ease-in-out infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
     @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
@@ -58,51 +57,51 @@
 <div class="nsb-container">
   <div class="nsb-card">
     <div class="nsb-header">
-      <button class="nsb-back" id="nsbBackLink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Back to site</button>
+      <button class="nsb-back" id="nsbBackLink" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Back to site</button>
       <h1 id="nsbShopName">Loading...</h1>
       <p class="nsb-sub" id="nsbShopTagline"></p>
+      <div id="nsbBusiness" data-business-id=""></div>
     </div>
+    
     <div class="nsb-step-label" id="nsbStepLabel">Step 1 of 3</div>
-    <button class="nsb-portal-link" id="nsbPortalLink">Returning client? Sign in here</button>
+    <button class="nsb-portal-link" id="nsbPortalLink" type="button">Returning client? Sign in here</button>
 
-```
-<div class="nsb-step" data-step="1">
-  <label class="nsb-label">Select Professional</label>
-  <select id="nsbBarber" class="nsb-select"><option value="">Any Available</option></select>
-  <div class="nsb-cal-header">
-    <button id="nsbPrevMonth" class="nsb-nav-btn" type="button">‹</button>
-    <div id="nsbCalMonth"></div>
-    <button id="nsbNextMonth" class="nsb-nav-btn" type="button">›</button>
-  </div>
-  <div class="nsb-cal-grid" id="nsbCalGrid"></div>
-  <button class="btn-main" id="nsbCalContinue" type="button" disabled>Choose Time</button>
-</div>
+    <div class="nsb-step" data-step="1">
+      <label class="nsb-label">Select Professional</label>
+      <select id="nsbBarber" class="nsb-select"><option value="">Any Available</option></select>
+      <div class="nsb-cal-header">
+        <button id="nsbPrevMonth" class="nsb-nav-btn" type="button">‹</button>
+        <div id="nsbCalMonth"></div>
+        <button id="nsbNextMonth" class="nsb-nav-btn" type="button">›</button>
+      </div>
+      <div class="nsb-cal-grid" id="nsbCalGrid"></div>
+      <button class="btn-main" id="nsbCalContinue" type="button" disabled>Choose Time</button>
+    </div>
 
-<div class="nsb-step" data-step="2" style="display:none;">
-  <p id="nsbStep2DateLabel" style="text-align:center; font-weight:bold; margin-bottom:12px;"></p>
-  <div class="nsb-time-grid" id="nsbTimeGrid"></div>
-  <input type="hidden" id="nsbTimeValue" />
-  <button class="btn-main" id="nsbTimeContinue" type="button" disabled>Enter Details</button>
-  <button class="btn-ghost" id="nsbBackToDate" type="button">Back to Calendar</button>
-</div>
+    <div class="nsb-step" data-step="2" style="display:none;">
+      <p id="nsbStep2DateLabel" style="text-align:center; font-weight:bold; margin-bottom:12px;"></p>
+      <div class="nsb-time-grid" id="nsbTimeGrid"></div>
+      <input type="hidden" id="nsbTimeValue" />
+      <button class="btn-main" id="nsbTimeContinue" type="button" disabled>Enter Details</button>
+      <button class="btn-ghost" id="nsbBackToDate" type="button">Back to Calendar</button>
+    </div>
 
-<div class="nsb-step" data-step="3" style="display:none;">
-  <select id="nsbService" class="nsb-select"><option value="">Loading Services...</option></select>
-  <input type="text" id="nsbClientName" placeholder="Full Name" class="nsb-input">
-  <input type="tel" id="nsbClientPhone" placeholder="Phone Number" class="nsb-input">
-  <input type="email" id="nsbClientEmail" placeholder="Email (optional)" class="nsb-input">
-  <label class="nsb-checkbox"><input type="checkbox" id="nsbSmsConsent" checked><span>Receive confirmation & reminders</span></label>
-  <button class="btn-main" id="nsbSubmitBtn" type="button">Confirm Booking</button>
-  <button class="btn-ghost" id="nsbBackToTime" type="button">Back</button>
-</div>
+    <div class="nsb-step" data-step="3" style="display:none;">
+      <select id="nsbService" class="nsb-select"><option value="">Loading Services...</option></select>
+      <input type="text" id="nsbClientName" placeholder="Full Name" class="nsb-input">
+      <input type="tel" id="nsbClientPhone" placeholder="Phone Number" class="nsb-input">
+      <input type="email" id="nsbClientEmail" placeholder="Email (optional)" class="nsb-input">
+      <label class="nsb-checkbox"><input type="checkbox" id="nsbSmsConsent" checked><span>Receive confirmation & reminders</span></label>
+      <button class="btn-main" id="nsbSubmitBtn" type="button">Confirm Booking</button>
+      <button class="btn-ghost" id="nsbBackToTime" type="button">Back</button>
+    </div>
 
-<div id="nsbSuccessView" style="display:none; text-align:center; padding:20px 0;">
-  <div class="nsb-success"><div style="font-size:24px; margin-bottom:8px;">✓</div><div style="font-weight:bold; text-transform:uppercase; letter-spacing:1px;">Confirmed</div><div id="nsbSuccessDetails" style="font-size:12px; margin-top:4px;"></div></div>
-  <button class="btn-main" onclick="location.href=document.referrer||'/'">Done</button>
-</div>
-<div class="nsb-powered">Powered by Net Studio</div>
-```
+    <div id="nsbSuccessView" style="display:none; text-align:center; padding:20px 0;">
+      <div class="nsb-success"><div style="font-size:24px; margin-bottom:8px;">✓</div><div style="font-weight:bold; text-transform:uppercase; letter-spacing:1px;">Confirmed</div><div id="nsbSuccessDetails" style="font-size:12px; margin-top:4px;"></div></div>
+      <button class="btn-main" onclick="location.href=document.referrer||'/'">Done</button>
+    </div>
 
+    <div class="nsb-powered">Powered by Net Studio</div>
   </div>
 </div>
 <script type="module" src="booking-engine.js"></script>
