@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Book — Powered by Net Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
+  <style>
+    :root {
+      --bg: #050507; --card: rgba(15,15,18,0.85); --text: #fff; --muted: rgba(255,255,255,0.5);
+      --accent: #ef4444; --error: #ef4444; --success: #10b981;
+      --input-bg: rgba(0,0,0,0.4); --border: rgba(255,255,255,0.12); --radius: 12px;
+      --safe-top: env(safe-area-inset-top); --safe-bottom: env(safe-area-inset-bottom);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html { background: #000; }
+    body { min-height:100vh; background:radial-gradient(circle at top,#1b1b22 0%,var(--bg) 60%,#000 100%); color:var(--text); font-family:'Inter',system-ui,sans-serif; display:flex; justify-content:center; padding:clamp(16px,3vw,28px) 16px calc(24px + var(--safe-bottom)); }
+    .nsb-container { width:100%; max-width:440px; }
+    .nsb-card { border-radius:24px; background:var(--card); border:1px solid var(--border); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); padding:0 24px 30px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); min-height:420px; }
+    .nsb-header { position:sticky; top:0; z-index:10; margin:0 -24px 24px; padding:24px 24px 16px; background:rgba(15,15,18,0.95); backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,0.08); }
+    .nsb-back { display:inline-flex; align-items:center; gap:6px; color:var(--muted); text-decoration:none; font-size:12px; text-transform:uppercase; letter-spacing:0.1em; font-weight:600; margin-bottom:12px; cursor:pointer; background:none; border:none; }
+    .nsb-back:hover { color:#fff; }
+    .nsb-back svg { width:14px; height:14px; }
+    h1 { font-size:18px; text-transform:uppercase; letter-spacing:0.2em; text-align:center; font-weight:700; font-style:italic; margin-bottom:4px; }
+    .nsb-sub { text-align:center; font-size:13px; color:var(--muted); }
+    .nsb-step-label { display:flex; align-items:center; justify-content:center; font-size:10px; letter-spacing:0.1em; text-transform:uppercase; padding:6px 12px; border-radius:20px; background:rgba(255,255,255,0.06); border:1px solid var(--border); margin:0 auto 18px; width:fit-content; color:var(--muted); }
+    .nsb-portal-link { display:block; text-align:center; margin-bottom:20px; font-size:12px; color:var(--muted); text-decoration:underline; cursor:pointer; background:none; border:none; }
+    .nsb-portal-link:hover { color:#fff; }
+    label.nsb-label { display:block; font-size:10px; text-transform:uppercase; color:var(--muted); margin-bottom:4px; letter-spacing:0.05em; font-weight:600; }
+    select.nsb-select, input.nsb-input { width:100%; padding:12px 14px; border-radius:var(--radius); border:1px solid var(--border); background:var(--input-bg); color:#fff; font-size:15px; outline:none; margin-bottom:12px; -webkit-appearance:none; appearance:none; }
+    select.nsb-select:focus, input.nsb-input:focus { border-color:var(--accent); }
+    select.nsb-select { background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e"); background-repeat:no-repeat; background-position:right 14px center; background-size:16px; padding-right:40px; }
+    .nsb-cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+    .nsb-nav-btn { background:none; border:1px solid var(--border); color:#fff; border-radius:50%; width:30px; height:30px; cursor:pointer; font-size:16px; }
+    .nsb-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+    .nsb-cal-day, .nsb-cal-spacer { height:38px; display:flex; align-items:center; justify-content:center; font-size:12px; }
+    .nsb-cal-day { border-radius:10px; border:none; background:rgba(255,255,255,0.03); color:#fff; cursor:pointer; font-family:inherit; }
+    .nsb-cal-day.selected { background:var(--accent)!important; color:#fff!important; font-weight:700; }
+    .nsb-cal-day.disabled { opacity:0.12; cursor:not-allowed; }
+    .nsb-time-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-height:280px; overflow-y:auto; padding:4px; }
+    .nsb-time-slot { border-radius:var(--radius); padding:12px 5px; border:1px solid var(--border); background:rgba(255,255,255,0.03); color:#fff; cursor:pointer; font-size:11px; text-align:center; font-family:inherit; }
+    .nsb-time-slot.selected { background:var(--accent)!important; color:#fff!important; font-weight:700; }
+    .btn-main { width:100%; padding:14px; border-radius:var(--radius); border:none; background:var(--accent); color:#fff; font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.05em; cursor:pointer; margin-top:12px; }
+    .btn-main:disabled { opacity:0.2; }
+    .btn-ghost { width:100%; margin-top:10px; padding:12px; border-radius:var(--radius); background:transparent; border:1px solid var(--border); color:#fff; font-size:11px; text-transform:uppercase; cursor:pointer; }
+    .nsb-checkbox { display:flex; align-items:center; font-size:12px; margin-bottom:12px; color:var(--muted); }
+    .nsb-checkbox input { margin-right:8px; accent-color:var(--accent); width:16px; height:16px; }
+    .nsb-success { background:rgba(34,197,94,0.15); color:#34d399; border:1px solid rgba(34,197,94,0.4); border-radius:var(--radius); padding:16px; margin-bottom:16px; text-align:center; }
+    .nsb-powered { text-align:center; font-size:11px; opacity:0.3; margin-top:20px; }
+    #nsbLoadingOverlay { position:fixed; inset:0; background:rgba(5,5,7,0.9); z-index:9999; display:flex; align-items:center; justify-content:center; transition:opacity 0.3s; opacity:0; pointer-events:none; }
+    .nsb-spinner { width:28px; height:28px; border:3px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s ease-in-out infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  </style>
+</head>
+<body>
+<div id="nsbLoadingOverlay"><div class="nsb-spinner"></div></div>
+<div class="nsb-container">
+  <div class="nsb-card">
+    <div class="nsb-header">
+      <button class="nsb-back" id="nsbBackLink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Back to site</button>
+      <h1 id="nsbShopName">Loading...</h1>
+      <p class="nsb-sub" id="nsbShopTagline"></p>
+    </div>
+    <div class="nsb-step-label" id="nsbStepLabel">Step 1 of 3</div>
+    <button class="nsb-portal-link" id="nsbPortalLink">Returning client? Sign in here</button>
+
+```
+<div class="nsb-step" data-step="1">
+  <label class="nsb-label">Select Professional</label>
+  <select id="nsbBarber" class="nsb-select"><option value="">Any Available</option></select>
+  <div class="nsb-cal-header">
+    <button id="nsbPrevMonth" class="nsb-nav-btn" type="button">‹</button>
+    <div id="nsbCalMonth"></div>
+    <button id="nsbNextMonth" class="nsb-nav-btn" type="button">›</button>
+  </div>
+  <div class="nsb-cal-grid" id="nsbCalGrid"></div>
+  <button class="btn-main" id="nsbCalContinue" type="button" disabled>Choose Time</button>
+</div>
+
+<div class="nsb-step" data-step="2" style="display:none;">
+  <p id="nsbStep2DateLabel" style="text-align:center; font-weight:bold; margin-bottom:12px;"></p>
+  <div class="nsb-time-grid" id="nsbTimeGrid"></div>
+  <input type="hidden" id="nsbTimeValue" />
+  <button class="btn-main" id="nsbTimeContinue" type="button" disabled>Enter Details</button>
+  <button class="btn-ghost" id="nsbBackToDate" type="button">Back to Calendar</button>
+</div>
+
+<div class="nsb-step" data-step="3" style="display:none;">
+  <select id="nsbService" class="nsb-select"><option value="">Loading Services...</option></select>
+  <input type="text" id="nsbClientName" placeholder="Full Name" class="nsb-input">
+  <input type="tel" id="nsbClientPhone" placeholder="Phone Number" class="nsb-input">
+  <input type="email" id="nsbClientEmail" placeholder="Email (optional)" class="nsb-input">
+  <label class="nsb-checkbox"><input type="checkbox" id="nsbSmsConsent" checked><span>Receive confirmation & reminders</span></label>
+  <button class="btn-main" id="nsbSubmitBtn" type="button">Confirm Booking</button>
+  <button class="btn-ghost" id="nsbBackToTime" type="button">Back</button>
+</div>
+
+<div id="nsbSuccessView" style="display:none; text-align:center; padding:20px 0;">
+  <div class="nsb-success"><div style="font-size:24px; margin-bottom:8px;">✓</div><div style="font-weight:bold; text-transform:uppercase; letter-spacing:1px;">Confirmed</div><div id="nsbSuccessDetails" style="font-size:12px; margin-top:4px;"></div></div>
+  <button class="btn-main" onclick="location.href=document.referrer||'/'">Done</button>
+</div>
+<div class="nsb-powered">Powered by Net Studio</div>
+```
+
+  </div>
+</div>
+<script type="module" src="booking-engine.js"></script>
+</body>
+</html>
