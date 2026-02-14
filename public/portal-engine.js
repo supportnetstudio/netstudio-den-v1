@@ -9,7 +9,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 const CONFIG = {
   URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
   KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-  REDIRECT_URL: `${location.origin}/verified.html`, // Updated to repo page
+  // ✅ HARDCODED PRODUCTION URL: Prevents Supabase 500 errors from unlisted preview origins
+  REDIRECT_URL: "https://netstudiodevelopment.com/verified.html",
 };
 
 // ── STATE ──
@@ -282,8 +283,8 @@ async function handleSignUp(e) {
     const smsOptIn = !!document.getElementById("nsdSmsConsent")?.checked;
     const consentText = "I agree to receive SMS texts related to my account and bookings. Msg & data rates may apply. Reply STOP to opt out.";
     
-    // Patch: Ensure redirectUrl uses the verified.html file
-    const redirectUrl = CONFIG.REDIRECT_URL || `${location.origin}/verified.html`;
+    // Using the hardcoded prod URL from CONFIG
+    const redirectUrl = CONFIG.REDIRECT_URL;
 
     const { error } = await state.supabase.auth.signUp({
       email,
