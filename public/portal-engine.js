@@ -53,6 +53,7 @@ const Utils = {
     if (!els.authMsg) return;
     els.authMsg.textContent = msg || "";
     els.authMsg.classList.add("success");
+    els.password?.classList.remove("error"); // Optional: clear field states
     els.authMsg.style.color = "var(--success)";
   },
 
@@ -218,8 +219,8 @@ async function handleSignUp(e) {
   btn.disabled = true;
   btn.textContent = "Creating Account...";
   try {
-    // ✅ DYNAMIC REDIRECT: Works with wildcard subdomains
-    const redirectUrl = `${location.origin}/verified?next=/customer-portal&business_id=${state.businessId}`;
+    // ✅ DYNAMIC REDIRECT: Updated to include .html extensions for physical file resolution
+    const redirectUrl = `${location.origin}/verified.html?next=/customer-portal.html&business_id=${state.businessId}`;
     
     const { error } = await state.supabase.auth.signUp({
       email: fd.get("email").trim(),
