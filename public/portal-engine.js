@@ -9,8 +9,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 const CONFIG = {
   URL: "https://jdvdgvolfmvlgyfklbwe.supabase.co",
   KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkdmRndm9sZm12bGd5ZmtsYndlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1Mjk5MDgsImV4cCI6MjA3OTEwNTkwOH0.xiAOgWof9En3jbCpY1vrYpj3HD-O6jMHbamIHTSflek",
-  // ✅ HARDCODED PRODUCTION URL: Prevents Supabase 500 errors from unlisted preview origins
-  REDIRECT_URL: "https://netstudiodevelopment.com/verified.html",
 };
 
 // ── STATE ──
@@ -67,10 +65,9 @@ const Utils = {
   secureEdgeFetch: async (functionName, payload) => {
     const { data: sessionData } = await state.supabase.auth.getSession();
     const session = sessionData?.session;
-    if (!session?.access_token) throw new Error("No active session. Please sign in.");
+    if (!session?.access_token) throw new Error("No active session.");
 
-    const url = `${CONFIG.URL}/functions/v1/${functionName}`;
-    const res = await fetch(url, {
+    const res = await fetch(`${CONFIG.URL}/functions/v1/${functionName}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -80,17 +77,8 @@ const Utils = {
       body: JSON.stringify(payload || {}),
     });
 
-    const text = await res.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = { raw: text };
-    }
-
-    if (!res.ok) {
-      throw new Error(data?.error || data?.message || `Edge error ${res.status}`);
-    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || data?.message || "Function error");
     return data;
   },
 };
@@ -104,10 +92,8 @@ function resolveBusinessIdFromUrlOrCache() {
     return bid;
   }
   try {
-    const cached = (localStorage.getItem("ns_business_id") || "").trim();
-    if (cached) return cached;
-  } catch {}
-  return null;
+    return (localStorage.getItem("ns_business_id") || "").trim();
+  } catch { return null; }
 }
 
 async function resolveBusinessId() {
@@ -116,26 +102,23 @@ async function resolveBusinessId() {
     state.businessId = direct;
     return direct;
   }
-
   const host = location.hostname.toLowerCase();
-  const { data, error } = await state.supabase
+  const { data } = await state.supabase
     .from("business")
     .select("id")
     .eq("custom_domain", host)
     .maybeSingle();
 
-  if (!error && data?.id) {
+  if (data?.id) {
     state.businessId = data.id;
     return data.id;
   }
-
   return null;
 }
 
 // ── CUSTOMER ──
 async function ensureCustomer(user) {
   if (state.customerId) return state.customerId;
-
   const meta = user?.user_metadata || {};
   const data = await Utils.secureEdgeFetch("ensure_customer_for_portal", {
     email: user.email,
@@ -143,32 +126,17 @@ async function ensureCustomer(user) {
     full_name: meta.full_name || "",
     phone: meta.phone || "",
     sms_opt_in: !!meta.sms_opt_in,
-    email_opt_in: null,
     sms_consent_text: meta.sms_consent_text || null,
   });
-
   state.customerId = data.customer_id;
   return state.customerId;
-}
-
-async function fetchCustomerPrefs() {
-  const { data, error } = await state.supabase
-    .from("customers")
-    .select("id, notify_sms_enabled, notify_email_enabled, phone_e164, sms_consent_at, sms_consent_text, user_id")
-    .eq("id", state.customerId)
-    .eq("business_id", state.businessId)
-    .maybeSingle();
-
-  if (error) return null;
-  return data || null;
 }
 
 // ── DASHBOARD ──
 function renderAppointments(appts) {
   if (!els.list) return;
   els.list.innerHTML = "";
-
-  if (!appts || appts.length === 0) {
+  if (!appts?.length) {
     if (els.noAppts) els.noAppts.style.display = "block";
     return;
   }
@@ -178,23 +146,16 @@ function renderAppointments(appts) {
     const d = new Date(a.start_at);
     const card = document.createElement("div");
     card.className = "nsd-appt-card";
-    card.dataset.bookingId = a.id;
-
-    const dateLabel = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-    const timeLabel = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     const serviceName = a.team_member_menu_items?.name || "Service";
     const status = a.status || "booked";
 
     card.innerHTML = `
-      <h3 style="font-size:15px; margin-bottom:6px;">${dateLabel} @ ${timeLabel}</h3>
-      <p style="opacity:0.7; font-size:13px; margin-bottom:12px;">
-        <span class="status ${status}">${status}</span> ${serviceName}
-      </p>
+      <h3 style="font-size:15px; margin-bottom:6px;">${d.toLocaleDateString()} @ ${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</h3>
+      <p style="opacity:0.7; font-size:13px; margin-bottom:12px;"><span class="status ${status}">${status}</span> ${serviceName}</p>
       <div style="display:flex; gap:10px;">
-        <button class="btn-tertiary js-resched" style="flex:1;" type="button">Reschedule</button>
-        <button class="btn-tertiary js-cancel btn-action-cancel" style="flex:1;" type="button">Cancel</button>
+        <button class="btn-tertiary js-resched" style="flex:1;">Reschedule</button>
+        <button class="btn-tertiary js-cancel btn-action-cancel" style="flex:1;">Cancel</button>
       </div>
-      <div class="js-row-msg" style="margin-top:10px; font-size:12px; font-weight:600; min-height:18px;"></div>
     `;
     els.list.appendChild(card);
   });
@@ -202,17 +163,8 @@ function renderAppointments(appts) {
 
 async function loadDashboard() {
   Utils.toggleLoading(true);
-
-  const { data: sessionData } = await state.supabase.auth.getSession();
-  const session = sessionData?.session;
-  if (!session) {
-    Utils.toggleLoading(false);
-    return;
-  }
-
   try {
-    await fetchCustomerPrefs();
-    const { data: appts, error: apptError } = await state.supabase
+    const { data: appts, error } = await state.supabase
       .from("bookings")
       .select("id, status, start_at, team_member_menu_items(name)")
       .eq("customer_id", state.customerId)
@@ -221,17 +173,13 @@ async function loadDashboard() {
       .neq("status", "cancelled")
       .order("start_at");
 
-    if (apptError) throw apptError;
-
+    if (error) throw error;
     renderAppointments(appts);
-
     if (els.authView) els.authView.style.display = "none";
     if (els.apptsView) els.apptsView.style.display = "block";
     document.body.classList.add("mode-dashboard");
   } catch (err) {
-    console.error(err);
-    Utils.showError("Failed to load dashboard. Please sign in again.");
-    await state.supabase.auth.signOut();
+    Utils.showError("Failed to load dashboard.");
   } finally {
     Utils.toggleLoading(false);
   }
@@ -242,17 +190,14 @@ async function handleSignIn(e) {
   e.preventDefault();
   const btn = e.target.querySelector("button");
   const fd = new FormData(e.target);
-
   btn.disabled = true;
   btn.textContent = "Signing In...";
-
   try {
     const { data, error } = await state.supabase.auth.signInWithPassword({
-      email: String(fd.get("email") || "").trim(),
-      password: String(fd.get("password") || ""),
+      email: fd.get("email").trim(),
+      password: fd.get("password"),
     });
     if (error) throw error;
-
     await ensureCustomer(data.user);
     await loadDashboard();
   } catch (err) {
@@ -266,41 +211,30 @@ async function handleSignUp(e) {
   e.preventDefault();
   const btn = e.target.querySelector("button");
   const fd = new FormData(e.target);
-
-  const email = String(fd.get("email") || "").trim();
-  const password = String(fd.get("password") || "");
-  const confirm = String(fd.get("confirm") || "");
-  const fullName = String(fd.get("fullName") || "").trim();
   const phone = Utils.formatPhone(fd.get("phone"));
-
-  if (password !== confirm) return Utils.showError("Passwords do not match");
-  if (!phone) return Utils.showError("Please enter a valid US mobile number");
+  if (fd.get("password") !== fd.get("confirm")) return Utils.showError("Passwords do not match");
+  if (!phone) return Utils.showError("Valid US mobile required");
 
   btn.disabled = true;
   btn.textContent = "Creating Account...";
-
   try {
-    const smsOptIn = !!document.getElementById("nsdSmsConsent")?.checked;
-    const consentText = "I agree to receive SMS texts related to my account and bookings. Msg & data rates may apply. Reply STOP to opt out.";
+    // ✅ DYNAMIC REDIRECT: Works with wildcard subdomains
+    const redirectUrl = `${location.origin}/verified?next=/customer-portal&business_id=${state.businessId}`;
     
-    // Using the hardcoded prod URL from CONFIG
-    const redirectUrl = CONFIG.REDIRECT_URL;
-
     const { error } = await state.supabase.auth.signUp({
-      email,
-      password,
+      email: fd.get("email").trim(),
+      password: fd.get("password"),
       options: {
         data: {
-          full_name: fullName,
+          full_name: fd.get("fullName"),
           phone,
-          sms_opt_in: smsOptIn,
-          sms_consent_text: smsOptIn ? consentText : null,
+          sms_opt_in: !!document.getElementById("nsdSmsConsent")?.checked,
+          sms_consent_text: "I agree to receive SMS texts related to my account and bookings.",
         },
         emailRedirectTo: redirectUrl,
       },
     });
     if (error) throw error;
-
     Utils.showSuccess("Check your email to verify your account.");
   } catch (err) {
     Utils.showError(err.message);
@@ -313,60 +247,37 @@ async function handleSignUp(e) {
 // ── INIT ──
 (async function init() {
   Utils.toggleLoading(true);
-
   const bId = await resolveBusinessId();
   if (!bId) {
     Utils.toggleLoading(false);
-    Utils.showError("Business not found. Missing business_id.");
+    Utils.showError("Business context missing.");
     return;
   }
 
-  // ✅ TAB SWITCHING
   if (els.tabNav) {
     els.tabNav.addEventListener("click", (e) => {
       const btn = e.target.closest("button");
-      if (!btn || !btn.dataset.tab) return;
-      els.tabNav.querySelectorAll("button[data-tab]").forEach((b) => b.classList.remove("active"));
+      if (!btn?.dataset.tab) return;
+      els.tabNav.querySelectorAll("button").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      document.querySelectorAll("[data-tab-content]").forEach((panel) => panel.classList.remove("active"));
-      const target = document.querySelector(`[data-tab-content="${btn.dataset.tab}"]`);
-      if (target) target.classList.add("active");
-      if (els.authMsg) els.authMsg.textContent = "";
+      document.querySelectorAll("[data-tab-content]").forEach(p => p.classList.remove("active"));
+      document.querySelector(`[data-tab-content="${btn.dataset.tab}"]`)?.classList.add("active");
     });
   }
 
   if (els.forms.signin) els.forms.signin.addEventListener("submit", handleSignIn);
   if (els.forms.signup) els.forms.signup.addEventListener("submit", handleSignUp);
 
-  document.querySelectorAll(".nsd-sign-out-btn").forEach((b) =>
-    b.addEventListener("click", async () => {
-      Utils.toggleLoading(true);
-      await state.supabase.auth.signOut();
-      location.reload();
-    })
-  );
-
-  state.supabase.auth.onAuthStateChange((event, session) => {
-    if (event === "SIGNED_OUT" || !session) {
-      if (els.authView) els.authView.style.display = "block";
-      if (els.apptsView) els.apptsView.style.display = "none";
-      document.body.classList.remove("mode-dashboard");
-    }
-  });
-
-  const { data: sessionData } = await state.supabase.auth.getSession();
-  const session = sessionData?.session;
-
+  const { data: { session } } = await state.supabase.auth.getSession();
   if (session) {
     try {
       await ensureCustomer(session.user);
       await loadDashboard();
     } catch {
       await state.supabase.auth.signOut();
-      Utils.toggleLoading(false);
     }
   } else {
     if (els.authView) els.authView.style.display = "block";
-    Utils.toggleLoading(false);
   }
+  Utils.toggleLoading(false);
 })();
