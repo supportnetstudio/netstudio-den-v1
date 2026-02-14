@@ -79,21 +79,19 @@
 
   <script>
     const params = new URLSearchParams(location.search);
-    const next = params.get("next");
 
-    const allowed =
-      next &&
-      (
-        next.includes(".netstudiodevelopment.com") ||
-        next.includes("netstudiodevelopment.com")
-      );
+    // ✅ Fix: Handle relative paths correctly by building off location.origin
+    const nextRaw = (params.get("next") || "/customer-portal.html").trim();
+    const businessId = (params.get("business_id") || "").trim();
+
+    const target = new URL(nextRaw, location.origin);
+
+    if (businessId && !target.searchParams.get("business_id")) {
+      target.searchParams.set("business_id", businessId);
+    }
 
     setTimeout(() => {
-      location.replace(
-        allowed
-          ? next
-          : "https://netstudiodevelopment.com"
-      );
+      location.replace(target.toString());
     }, 900);
   </script>
 
