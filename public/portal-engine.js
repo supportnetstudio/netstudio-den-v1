@@ -53,7 +53,6 @@ const Utils = {
     if (!els.authMsg) return;
     els.authMsg.textContent = msg || "";
     els.authMsg.classList.add("success");
-    els.password?.classList.remove("error"); // Optional: clear field states
     els.authMsg.style.color = "var(--success)";
   },
 
@@ -121,14 +120,17 @@ async function resolveBusinessId() {
 async function ensureCustomer(user) {
   if (state.customerId) return state.customerId;
   const meta = user?.user_metadata || {};
+  
+  // This edge function links auth.users.id to public.customers.auth_user_id
   const data = await Utils.secureEdgeFetch("ensure_customer_for_portal", {
     email: user.email,
-    business_id: state.businessId,
+    business_id: state.businessId || meta.business_id,
     full_name: meta.full_name || "",
     phone: meta.phone || "",
     sms_opt_in: !!meta.sms_opt_in,
     sms_consent_text: meta.sms_consent_text || null,
   });
+  
   state.customerId = data.customer_id;
   return state.customerId;
 }
@@ -213,13 +215,15 @@ async function handleSignUp(e) {
   const btn = e.target.querySelector("button");
   const fd = new FormData(e.target);
   const phone = Utils.formatPhone(fd.get("phone"));
+  
   if (fd.get("password") !== fd.get("confirm")) return Utils.showError("Passwords do not match");
   if (!phone) return Utils.showError("Valid US mobile required");
 
   btn.disabled = true;
   btn.textContent = "Creating Account...";
+  
   try {
-    // ✅ DYNAMIC REDIRECT: Updated to include .html extensions for physical file resolution
+    // Dynamic redirect with .html extension
     const redirectUrl = `${location.origin}/verified.html?next=/customer-portal.html&business_id=${state.businessId}`;
     
     const { error } = await state.supabase.auth.signUp({
@@ -227,6 +231,8 @@ async function handleSignUp(e) {
       password: fd.get("password"),
       options: {
         data: {
+          role: "customer", // 👈 Prevents trigger from running "Create Business" logic
+          business_id: state.businessId, // 👈 Passed to ensure_customer_for_portal via metadata
           full_name: fd.get("fullName"),
           phone,
           sms_opt_in: !!document.getElementById("nsdSmsConsent")?.checked,
