@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Verified — Net Studio</title>
+
+  <style>
+    :root {
+      --bg-dark: #050507;
+      --bg-gradient: radial-gradient(circle at top, #1b1b22 0%, #000 100%);
+      --accent: #ef4444;
+      --glass: rgba(255,255,255,0.05);
+      --glass-border: rgba(255,255,255,0.1);
+      --text-main: #fff;
+      --text-muted: rgba(255,255,255,0.6);
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100dvh;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 480px;
+      padding: 40px;
+      border-radius: 20px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 18px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      margin-bottom: 16px;
+      font-style: italic;
+    }
+
+    p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin: 0 auto;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>Verification Complete</h1>
+    <p>Finalizing your account and redirecting…</p>
+    <div class="spinner"></div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const next = params.get("next");
+
+    const allowed =
+      next &&
+      (
+        next.includes(".netstudiodevelopment.com") ||
+        next.includes("netstudiodevelopment.com")
+      );
+
+    setTimeout(() => {
+      location.replace(
+        allowed
+          ? next
+          : "https://netstudiodevelopment.com"
+      );
+    }, 900);
+  </script>
+
+</body>
+</html>
